@@ -1,8 +1,7 @@
 import { execFile } from "node:child_process";
 import { createDecipheriv } from "node:crypto";
 import fs from "node:fs";
-import { pipeline } from "node:stream/promises";
-import { createGunzip } from "node:zlib";
+import { gunzipSync } from "node:zlib";
 
 function loadEncryptionKey(): Buffer {
   const encoded = process.env["BACKUP_ENCRYPTION_KEY"];
@@ -18,6 +17,32 @@ function loadEncryptionKey(): Buffer {
   return key;
 }
 
+/**
+ * Decrypts and decompresses the whole backup file into memory before
+ * returning. This is intentional: GCM only verifies its auth tag once all
+ * ciphertext has been processed (`decipher.final()`), so streaming
+ * decrypted-but-unverified plaintext directly into `psql` would let a
+ * corrupted or tampered backup partially execute before the integrity
+ * failure is detected. Buffering first means a tampered backup throws
+ * before a single statement reaches the database. See the equivalent
+ * trade-off note in backup.ts.
+ */
+function decryptBackup(backupFile: string, encryptionKey: Buffer): Buffer {
+  const fileSize = fs.statSync(backupFile).size;
+  const raw = fs.readFileSync(backupFile);
+  const iv = raw.subarray(0, 12);
+  const authTag = raw.subarray(fileSize - 16);
+  const ciphertext = raw.subarray(12, fileSize - 16);
+
+  const decipher = createDecipheriv("aes-256-gcm", encryptionKey, iv);
+  decipher.setAuthTag(authTag);
+  const compressed = Buffer.concat([
+    decipher.update(ciphertext),
+    decipher.final(),
+  ]);
+  return gunzipSync(compressed);
+}
+
 async function restore(backupFile: string): Promise<void> {
   const connectionString = process.env["DATABASE_URL"];
   if (!connectionString) {
@@ -28,23 +53,7 @@ async function restore(backupFile: string): Promise<void> {
     throw new Error(`Backup file not found: ${backupFile}`);
   }
   const encryptionKey = loadEncryptionKey();
-
-  // Layout written by backup.ts: [12-byte IV][ciphertext][16-byte GCM auth tag]
-  const fileSize = fs.statSync(backupFile).size;
-  const fd = fs.openSync(backupFile, "r");
-  const iv = Buffer.alloc(12);
-  const authTag = Buffer.alloc(16);
-  fs.readSync(fd, iv, 0, 12, 0);
-  fs.readSync(fd, authTag, 0, 16, fileSize - 16);
-  fs.closeSync(fd);
-
-  const decipher = createDecipheriv("aes-256-gcm", encryptionKey, iv);
-  decipher.setAuthTag(authTag);
-  const ciphertextStream = fs.createReadStream(backupFile, {
-    start: 12,
-    end: fileSize - 16 - 1,
-  });
-  const gunzip = createGunzip();
+  const sql = decryptBackup(backupFile, encryptionKey);
 
   const parsed = new URL(connectionString);
   const env = { ...process.env, PGPASSWORD: parsed.password };
@@ -74,9 +83,7 @@ async function restore(backupFile: string): Promise<void> {
   if (!proc.stdin) {
     throw new Error("psql did not provide a stdin stream");
   }
-
-  // Decrypt (auth tag verified on stream end) -> gunzip -> feed into psql.
-  await pipeline(ciphertextStream, decipher, gunzip, proc.stdin);
+  proc.stdin.end(sql);
 
   const exitCode: number = await new Promise((resolve, reject) => {
     proc.on("close", (code) => {
