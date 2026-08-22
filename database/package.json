@@ -1,0 +1,32 @@
+{
+  "name": "@saas/database-migrations",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Database migrations and scripts",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "migrate": "node --experimental-strip-types scripts/run-migrations.ts up",
+    "migrate:down": "node --experimental-strip-types scripts/run-migrations.ts down",
+    "migrate:status": "node --experimental-strip-types scripts/run-migrations.ts status",
+    "migrate:plan": "node --experimental-strip-types scripts/run-migrations.ts plan",
+    "seed": "node --experimental-strip-types scripts/seed.ts",
+    "reset": "node --experimental-strip-types scripts/reset.ts"
+  },
+  "dependencies": {
+    "@saas/config": "workspace:*",
+    "@saas/database": "workspace:*",
+    "kysely": "0.29.5",
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@saas/eslint-config": "workspace:*",
+    "@saas/typescript-config": "workspace:*",
+    "@types/node": "22.15.14",
+    "@types/pg": "8.15.3",
+    "eslint": "10.8.1",
+    "typescript": "5.9.3"
+  }
+}

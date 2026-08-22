@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+out/
+*.tsbuildinfo
+packages/ui-web/storybook-static/
+.nx/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+*.secret
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Devin local overrides
+.devin/config.local.json
+.devin/mcp_config.local.json
+AGENTS.local.md
+
+# IDE and OS
+.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Docker volumes
+volumes/
+data/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Mobile
+apps/mobile/.expo/
+apps/mobile/ios/Pods/
+apps/mobile/android/build/
+apps/mobile/android/.gradle/

@@ -1,0 +1,27 @@
+FROM node:24.18.0-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@11.15.1 --activate
+
+FROM base AS deps
+WORKDIR /app
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml nx.json ./
+COPY database/package.json ./database/package.json
+COPY packages/*/package.json ./packages/*/
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter @saas/database-migrations...
+
+FROM node:24.18.0-alpine AS production
+WORKDIR /app
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=deps --chown=nodejs:nodejs /app/database/node_modules ./database/node_modules
+COPY --chown=nodejs:nodejs database ./database
+COPY --chown=nodejs:nodejs packages ./packages
+WORKDIR /app/database
+USER nodejs
+ENV NODE_ENV=production
+# Target defaults to "tenant"; pass "admin" as an extra arg to migrate the
+# central catalog instead. This image migrates ONE database per run — the
+# operator (or a wrapper Job/CronJob) is responsible for iterating tenants.
+# See docs/database/migration-standards.md.
+CMD ["node", "--experimental-strip-types", "scripts/run-migrations.ts", "up", "tenant"]

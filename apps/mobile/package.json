@@ -1,0 +1,39 @@
+{
+  "name": "@saas/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mobile application with Expo",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "expo-router-entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@saas/api-client": "workspace:*",
+    "@saas/contracts": "workspace:*",
+    "@saas/ui-native": "workspace:*",
+    "@tanstack/react-query": "5.101.4",
+    "expo": "57.0.12",
+    "expo-router": "5.0.5",
+    "expo-secure-store": "57.0.1",
+    "react": "19.2.8",
+    "react-native": "0.87.0",
+    "socket.io-client": "4.8.3"
+  },
+  "devDependencies": {
+    "@babel/core": "8.0.1",
+    "@saas/eslint-config": "workspace:*",
+    "@saas/typescript-config": "workspace:*",
+    "@types/react": "19.2.18",
+    "eslint": "10.8.1",
+    "vitest": "4.1.10",
+    "typescript": "5.9.3"
+  }
+}

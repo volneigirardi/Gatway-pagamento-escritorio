@@ -1,0 +1,222 @@
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik:v3.6
+    command:
+      - --api.dashboard=false
+      - --providers.docker.swarmMode=true
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=ops@example.com
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --accesslog=true
+      - --log.level=INFO
+    ports:
+      - target: 80
+        published: 80
+      - target: 443
+        published: 443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/letsencrypt
+    networks:
+      - edge
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+
+  api:
+    image: saas/api:${VERSION:-latest}
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL_FILE: /run/secrets/database_url
+      REDIS_URL_FILE: /run/secrets/redis_url
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      CORS_ORIGINS_FILE: /run/secrets/cors_origins
+      LOG_LEVEL: info
+    secrets:
+      - database_url
+      - redis_url
+      - jwt_secret
+      - cors_origins
+    networks:
+      - edge
+      - backend
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/v1/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.example.com`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.api-ratelimit.ratelimit.average=100"
+      - "traefik.http.middlewares.api-ratelimit.ratelimit.burst=200"
+      - "traefik.http.routers.api.middlewares=api-ratelimit@docker"
+
+  realtime:
+    image: saas/realtime:${VERSION:-latest}
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      REDIS_URL_FILE: /run/secrets/redis_url
+      CORS_ORIGINS_FILE: /run/secrets/cors_origins
+      LOG_LEVEL: info
+    secrets:
+      - redis_url
+      - cors_origins
+    networks:
+      - edge
+      - backend
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.realtime.rule=Host(`realtime.example.com`)"
+      - "traefik.http.routers.realtime.entrypoints=websecure"
+      - "traefik.http.routers.realtime.tls.certresolver=letsencrypt"
+      - "traefik.http.services.realtime.loadbalancer.server.port=3002"
+      - "traefik.http.services.realtime.loadbalancer.server.scheme=http"
+
+  worker:
+    image: saas/worker:${VERSION:-latest}
+    environment:
+      NODE_ENV: production
+      DATABASE_URL_FILE: /run/secrets/database_url
+      REDIS_URL_FILE: /run/secrets/redis_url
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      LOG_LEVEL: info
+    secrets:
+      - database_url
+      - redis_url
+      - jwt_secret
+    networks:
+      - backend
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  scheduler:
+    image: saas/scheduler:${VERSION:-latest}
+    environment:
+      NODE_ENV: production
+      DATABASE_URL_FILE: /run/secrets/database_url
+      REDIS_URL_FILE: /run/secrets/redis_url
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      LOG_LEVEL: info
+    secrets:
+      - database_url
+      - redis_url
+      - jwt_secret
+    networks:
+      - backend
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+
+  migrate:
+    image: saas/migrate:${VERSION:-latest}
+    environment:
+      NODE_ENV: production
+      DATABASE_URL_FILE: /run/secrets/database_url
+      REDIS_URL_FILE: /run/secrets/redis_url
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+    secrets:
+      - database_url
+      - redis_url
+      - jwt_secret
+    networks:
+      - backend
+    deploy:
+      restart_policy:
+        condition: none
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+networks:
+  edge:
+    driver: overlay
+    attachable: false
+  backend:
+    driver: overlay
+    internal: true
+
+volumes:
+  traefik_certs:
+
+secrets:
+  database_url:
+    external: true
+  redis_url:
+    external: true
+  jwt_secret:
+    external: true
+  cors_origins:
+    external: true

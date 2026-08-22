@@ -1,0 +1,24 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "database"
+
+overrides:
+  fastify: 5.11.3
+
+allowBuilds:
+  "@scarf/scarf": true
+  cpu-features: true
+  esbuild: true
+  msgpackr-extract: true
+  nx: true
+  protobufjs: true
+  ssh2: true
+  unrs-resolver: true
+
+onlyBuiltDependencies:
+  - "@scarf/scarf"
+  - esbuild
+  - msgpackr-extract
+  - nx
+  - unrs-resolver

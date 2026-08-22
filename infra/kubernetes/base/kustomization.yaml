@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: saas
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - configmap.yaml
+  # secret.yaml is intentionally not listed here — create it out-of-band
+  # (see secret.yaml.example) or manage it with an external secret operator.
+  - deployment-api.yaml
+  - service-api.yaml
+  - deployment-realtime.yaml
+  - service-realtime.yaml
+  - deployment-worker.yaml
+  - deployment-scheduler.yaml
+  - hpa.yaml
+  - pdb.yaml
+  - networkpolicy.yaml

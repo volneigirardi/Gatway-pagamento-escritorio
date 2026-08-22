@@ -1,0 +1,27 @@
+# Glossary
+
+- **ABAC** — Attribute-Based Access Control. Authorization based on user, resource, and environment attributes.
+- **ADR** — Architecture Decision Record. Documented decision with context, decision, consequences, and status.
+- **BOLA** — Broken Object Level Authorization. Security risk where users access objects they should not.
+- **BullMQ** — Redis-backed job queue for Node.js.
+- **Deployable** — Independently runnable application (api, worker, realtime, scheduler, migrations).
+- **DLQ** — Dead Letter Queue. Storage for jobs that failed permanently.
+- **JWT** — JSON Web Token. Signed token used for access token and refresh token.
+- **Kysely** — Type-safe SQL query builder for TypeScript.
+- **LGPD** — Lei Geral de Proteção de Dados. Brazilian data protection law.
+- **MFA** — Multi-Factor Authentication. Requires two or more verification factors.
+- **mTLS** — Mutual TLS. Both client and server authenticate each other with certificates.
+- **OpenAPI** — Specification for HTTP APIs; source of truth for client generation.
+- **Outbox** — Transactional outbox pattern for reliable event publishing.
+- **PgBouncer** — PostgreSQL connection pooler.
+- **RBAC** — Role-Based Access Control. Permissions granted via roles.
+- **Redis** — In-memory data store used for cache, sessions, rate limits, locks, queues, and pub/sub.
+- **RLS** — Row-Level Security. PostgreSQL feature for additional tenant isolation defense.
+- **RPO** — Recovery Point Objective. Maximum acceptable data loss.
+- **RTO** — Recovery Time Objective. Maximum acceptable downtime.
+- **SaaS** — Software as a Service. Cloud application used by multiple customers (tenants).
+- **SIEM** — Security Information and Event Management.
+- **Socket.IO** — Realtime communication library.
+- **Tenant** — A customer organization in the SaaS; mapped to a dedicated PostgreSQL database.
+- **TOTP** — Time-based One-Time Password. MFA method using authenticator apps.
+- **Traefik** — Reverse proxy and load balancer.

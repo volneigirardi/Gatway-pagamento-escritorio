@@ -1,0 +1,29 @@
+FROM node:24.18.0-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@11.15.1 --activate
+
+FROM base AS deps
+WORKDIR /app
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml nx.json ./
+COPY apps/realtime/package.json ./apps/realtime/package.json
+COPY packages/*/package.json ./packages/*/
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter @saas/realtime...
+
+FROM base AS build
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps ./apps
+COPY --from=deps /app/packages ./packages
+COPY . .
+RUN pnpm --filter @saas/realtime build
+
+FROM node:24.18.0-alpine AS production
+WORKDIR /app
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+COPY --from=build --chown=nodejs:nodejs /app/apps/realtime/dist ./dist
+COPY --from=build --chown=nodejs:nodejs /app/apps/realtime/package.json ./
+USER nodejs
+ENV NODE_ENV=production
+EXPOSE 3002
+CMD ["node", "dist/main.js"]

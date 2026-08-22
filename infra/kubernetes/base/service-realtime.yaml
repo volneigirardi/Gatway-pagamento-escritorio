@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: realtime
+  namespace: saas
+  labels:
+    app: realtime
+spec:
+  # Transports are restricted to "websocket" only (see events.gateway.ts),
+  # so no long-polling session affinity is required at the Service level.
+  selector:
+    app: realtime
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

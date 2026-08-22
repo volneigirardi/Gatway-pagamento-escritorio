@@ -1,0 +1,26 @@
+{
+  "PreToolUse": [
+    {
+      "matcher": "^(exec|write_to_process)$",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "powershell.exe -ExecutionPolicy Bypass -File .devin/scripts/check-command.ps1",
+          "timeout": 10
+        }
+      ]
+    }
+  ],
+  "UserPromptSubmit": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Follow the governance in AGENTS.md, .devin/rules/, and .devin/skills/. Destructive commands require explicit approval.\"}}'",
+          "timeout": 5
+        }
+      ]
+    }
+  ]
+}

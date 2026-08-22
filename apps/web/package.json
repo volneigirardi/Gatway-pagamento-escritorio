@@ -1,0 +1,48 @@
+{
+  "name": "@saas/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web frontend application",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "lint": "eslint .",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "dependencies": {
+    "@saas/api-client": "workspace:*",
+    "@saas/contracts": "workspace:*",
+    "@saas/design-tokens": "workspace:*",
+    "@saas/ui-web": "workspace:*",
+    "@tanstack/react-query": "5.101.4",
+    "@tanstack/react-router": "1.170.27",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-hook-form": "7.85.0",
+    "socket.io-client": "4.8.3",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@saas/eslint-config": "workspace:*",
+    "@saas/typescript-config": "workspace:*",
+    "@tanstack/router-devtools": "1.167.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.0.5",
+    "eslint": "10.8.1",
+    "playwright": "1.62.1",
+    "storybook": "8.6.14",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "vite": "8.2.1",
+    "vitest": "4.1.10"
+  }
+}

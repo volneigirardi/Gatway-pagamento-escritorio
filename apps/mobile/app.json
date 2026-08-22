@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "SaaS Mobile",
+    "slug": "saas-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"],
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.saas.mobile" },
+    "android": { "package": "com.saas.mobile" },
+    "web": { "bundler": "metro", "output": "static" },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": { "typedRoutes": true, "newArchEnabled": true }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "extends": "@saas/typescript-config/node.json",
+  "compilerOptions": {
+    "outDir": "./dist-integration",
+    "rootDir": ".",
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["src/**/*", "test/**/*"]
+}

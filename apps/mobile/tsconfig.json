@@ -1,0 +1,5 @@
+{
+  "extends": "@saas/typescript-config/react-native.json",
+  "compilerOptions": { "module": "ESNext", "moduleResolution": "Bundler" },
+  "include": ["src/**/*", "app.json"]
+}

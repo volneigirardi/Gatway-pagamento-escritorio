@@ -1,0 +1,10 @@
+node_modules
+.pnpm-store
+dist
+.git
+.env
+*.local
+apps/*/dist
+packages/*/dist
+.vscode
+.idea

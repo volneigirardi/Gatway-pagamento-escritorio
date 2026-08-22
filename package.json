@@ -1,0 +1,57 @@
+{
+  "name": "saas-enterprise-foundation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-tenant enterprise SaaS foundation",
+  "license": "UNLICENSED",
+  "author": "SaaS Team",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0 <25.0.0",
+    "pnpm": ">=11.0.0"
+  },
+  "packageManager": "pnpm@11.15.1",
+  "scripts": {
+    "dev": "nx run-many -t dev -p api web",
+    "dev:api": "nx dev api",
+    "dev:web": "nx dev web",
+    "dev:mobile": "nx start mobile",
+    "dev:realtime": "nx dev realtime",
+    "dev:worker": "nx dev worker",
+    "dev:scheduler": "nx dev scheduler",
+    "build": "nx run-many -t build --all",
+    "lint": "nx run-many -t lint --all",
+    "lint:fix": "nx run-many -t lint --all --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "typecheck": "nx run-many -t typecheck --all",
+    "test": "nx run-many -t test --all",
+    "test:unit": "nx run-many -t test --all",
+    "test:integration": "nx run-many -t test:integration --all",
+    "test:e2e": "nx run-many -t e2e --all",
+    "test:realtime": "nx run-many -t test:realtime --all",
+    "db:migrate": "node --experimental-strip-types database/scripts/run-migrations.ts up",
+    "db:migrate:down": "node --experimental-strip-types database/scripts/run-migrations.ts down",
+    "db:migrate:status": "node --experimental-strip-types database/scripts/run-migrations.ts status",
+    "db:seed": "node --experimental-strip-types database/scripts/seed.ts",
+    "db:reset": "node --experimental-strip-types database/scripts/reset.ts",
+    "docker:up": "docker compose -f infra/docker/docker-compose.dev.yml up -d",
+    "docker:down": "docker compose -f infra/docker/docker-compose.dev.yml down",
+    "docker:logs": "docker compose -f infra/docker/docker-compose.dev.yml logs -f",
+    "quality": "pnpm lint && pnpm typecheck && pnpm test",
+    "affected": "nx affected -t lint,typecheck,test",
+    "prepare": "node -e \"process.env.CI || console.log('skipping husky install')\""
+  },
+  "devDependencies": {
+    "@types/node": "26.2.0",
+    "eslint": "10.8.1",
+    "nx": "23.1.1",
+    "prettier": "3.9.6",
+    "testcontainers": "10.24.2",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  }
+}

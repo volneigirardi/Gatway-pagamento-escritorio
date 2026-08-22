@@ -1,0 +1,9 @@
+{
+  "extends": "@saas/typescript-config/react.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "noEmit": false
+  },
+  "include": ["src/**/*"]
+}
