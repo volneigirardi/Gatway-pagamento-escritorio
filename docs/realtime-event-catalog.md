@@ -4,13 +4,13 @@
 > scaffolding, not a business feature — real domains will define their own
 > events following this same contract.
 
-| Event                 | Direction       | Version | Payload                             | Authorization                       | Notes                                                          |
-| --------------------- | ---------------- | ------- | ------------------------------------ | ------------------------------------ | --------------------------------------------------------------- |
-| `v1.events.join`      | client -> server | v1      | none                                 | requires verified JWT in handshake   | joins `tenant:{tenantId}` room derived from the token, ack'd    |
-| `v1.events.joined`    | server -> client | v1      | `{ tenantId }`                       | n/a                                   | confirmation after join                                          |
-| `v1.events.broadcast` | client -> server | v1      | `{ eventId: uuid, content: string }` | requires verified JWT; rate-limited   | 20 events / 10s per socket; deduped server-side by `eventId`   |
-| `v1.events.message`   | server -> client | v1      | `{ eventId, tenantId, content, timestamp }` | scoped to `tenant:{tenantId}` room | broadcast to all sockets joined to the tenant room               |
-| `v1.events.error`     | server -> client | v1      | `{ code: string }`                   | n/a                                   | `unauthorized`, `rate_limited`, `invalid_payload`               |
+| Event                 | Direction        | Version | Payload                                     | Authorization                       | Notes                                                        |
+| --------------------- | ---------------- | ------- | ------------------------------------------- | ----------------------------------- | ------------------------------------------------------------ |
+| `v1.events.join`      | client -> server | v1      | none                                        | requires verified JWT in handshake  | joins `tenant:{tenantId}` room derived from the token, ack'd |
+| `v1.events.joined`    | server -> client | v1      | `{ tenantId }`                              | n/a                                 | confirmation after join                                      |
+| `v1.events.broadcast` | client -> server | v1      | `{ eventId: uuid, content: string }`        | requires verified JWT; rate-limited | 20 events / 10s per socket; deduped server-side by `eventId` |
+| `v1.events.message`   | server -> client | v1      | `{ eventId, tenantId, content, timestamp }` | scoped to `tenant:{tenantId}` room  | broadcast to all sockets joined to the tenant room           |
+| `v1.events.error`     | server -> client | v1      | `{ code: string }`                          | n/a                                 | `unauthorized`, `rate_limited`, `invalid_payload`            |
 
 Naming convention: `v1.<domain>.<event>`.
 All payloads validated with Zod.

@@ -1,0 +1,33 @@
+{
+  "name": "@saas/http-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SSRF-safe outbound HTTP client with timeout, retry, and circuit breaker",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "cockatiel": "4.0.0"
+  },
+  "devDependencies": {
+    "@saas/eslint-config": "workspace:*",
+    "@saas/typescript-config": "workspace:*",
+    "@types/node": "26.2.0",
+    "eslint": "10.8.1",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
+}

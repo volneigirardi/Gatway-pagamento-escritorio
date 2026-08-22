@@ -5,7 +5,11 @@ import { randomUUID } from "node:crypto";
 
 const JWT_SECRET = "test-secret-32-bytes-long-for-tests-only";
 
-function createMockClient(auth?: { tenantId: string; userId: string; roles: string[] }) {
+function createMockClient(auth?: {
+  tenantId: string;
+  userId: string;
+  roles: string[];
+}) {
   const emitted: { event: string; payload: unknown }[] = [];
   return {
     id: randomUUID(),
@@ -46,9 +50,9 @@ describe("EventsGateway", () => {
     await gateway.handleConnection(client as never);
 
     expect(client.disconnect).not.toHaveBeenCalled();
-    expect((client.data as { auth?: { tenantId: string } }).auth?.tenantId).toBe(
-      "22222222-2222-4222-8222-222222222222",
-    );
+    expect(
+      (client.data as { auth?: { tenantId: string } }).auth?.tenantId,
+    ).toBe("22222222-2222-4222-8222-222222222222");
   });
 
   it("rejects a forged/unsigned token", async () => {
@@ -91,8 +95,16 @@ describe("EventsGateway", () => {
     const eventId = randomUUID();
     const ack = vi.fn();
 
-    gateway.handleBroadcast({ eventId, content: "hello" }, client as never, ack);
-    gateway.handleBroadcast({ eventId, content: "hello" }, client as never, ack);
+    gateway.handleBroadcast(
+      { eventId, content: "hello" },
+      client as never,
+      ack,
+    );
+    gateway.handleBroadcast(
+      { eventId, content: "hello" },
+      client as never,
+      ack,
+    );
 
     expect(ack).toHaveBeenCalledTimes(2);
     expect(ack).toHaveBeenNthCalledWith(1, { ok: true });

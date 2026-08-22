@@ -80,7 +80,9 @@ async function migrate(direction: Direction): Promise<void> {
           ? "No pending migrations."
           : `Pending migrations (${String(pending.length)}):`,
       );
-      pending.forEach((m) => console.log(`  - ${m.name}`));
+      pending.forEach((m) => {
+        console.log(`  - ${m.name}`);
+      });
     } else {
       console.table(migrations);
     }

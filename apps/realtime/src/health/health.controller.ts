@@ -7,7 +7,10 @@ export class HealthController {
 
   @Get()
   live(): { status: string; timestamp: string } {
-    return { ...this.healthService.isLive(), timestamp: new Date().toISOString() };
+    return {
+      ...this.healthService.isLive(),
+      timestamp: new Date().toISOString(),
+    };
   }
 
   @Get("live")

@@ -65,11 +65,9 @@ export function initTelemetry(config: TelemetryConfig): NodeSDK | undefined {
   sdk.start();
 
   const shutdown = (): void => {
-    void sdk
-      ?.shutdown()
-      .catch(() => {
-        // Best-effort shutdown; do not block process exit on telemetry flush errors.
-      });
+    void sdk?.shutdown().catch(() => {
+      // Best-effort shutdown; do not block process exit on telemetry flush errors.
+    });
   };
   process.once("SIGTERM", shutdown);
   process.once("SIGINT", shutdown);
