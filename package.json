@@ -28,7 +28,7 @@
     "test": "nx run-many -t test --all",
     "test:unit": "nx run-many -t test --all",
     "test:integration": "nx run-many -t test:integration --all",
-    "test:e2e": "nx run-many -t e2e --all",
+    "test:e2e": "nx run-many -t test:e2e --all",
     "test:realtime": "nx run-many -t test:realtime --all",
     "db:migrate": "node --experimental-strip-types database/scripts/run-migrations.ts up",
     "db:migrate:down": "node --experimental-strip-types database/scripts/run-migrations.ts down",

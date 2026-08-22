@@ -7,7 +7,9 @@ test.describe("smoke", () => {
     await expect(
       page.getByRole("heading", { name: "SaaS Enterprise" }),
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: "Get started" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Get started" }),
+    ).toBeVisible();
 
     await page.getByRole("link", { name: "About" }).click();
 

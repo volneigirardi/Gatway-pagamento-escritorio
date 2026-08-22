@@ -50,6 +50,8 @@ describe("assertPublicHttpUrl", () => {
   });
 
   it("allows a public IPv4 address", async () => {
-    await expect(assertPublicHttpUrl("http://8.8.8.8/")).resolves.toBeUndefined();
+    await expect(
+      assertPublicHttpUrl("http://8.8.8.8/"),
+    ).resolves.toBeUndefined();
   });
 });

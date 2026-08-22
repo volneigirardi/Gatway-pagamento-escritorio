@@ -51,15 +51,23 @@ pnpm docker:up
 pnpm docker:down
 ```
 
-## Devin
+## Devin CLI
+
+Run from a terminal (these are `devin` CLI subcommands, not in-chat slash
+commands — verified against the Devin CLI reference during the Fase 5
+foundation audit):
 
 ```bash
 # List rules
-/devin/rules list
+devin rules list
 
 # List skills
-/devin/skills list
+devin skills list
 
-# Show hooks
-/hooks
+# Show rule/skill directory locations
+devin rules paths
+devin skills paths
 ```
+
+There is no `devin hooks` inspection command; review `.devin/hooks.v1.json`
+directly to see configured hooks.

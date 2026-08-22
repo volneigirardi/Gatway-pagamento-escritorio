@@ -117,6 +117,76 @@ Nenhuma decisão arquitetural anterior foi alterada sem aprovação. As únicas 
 - Não foi implementada funcionalidade de negócio completa.
 - Não foram re-executados os oito reviews especializados; as correções foram baseadas nos achados já consolidados e nos quality gates.
 
-## 10. Conclusão
+## 10. Conclusão (Fase 4)
 
 A fundação do SaaS está hardened, documentada e com quality gates automatizados. A base está pronta para receber domínios de negócio de forma segura e escalável.
+
+---
+
+## 11. Fase 4B — Auditoria e Correção de Gaps Operacionais
+
+Após a Fase 4, foi feita uma auditoria completa pedindo "faça tudo o que não foi feito e deixe tudo operacional e correto". Esta seção documenta o que realmente foi entregue nessa rodada, incluindo bugs reais encontrados no código já existente (não apenas itens "não feitos").
+
+### 11.1 Bugs reais encontrados e corrigidos
+
+| #   | Problema                                                                                                                                                 | Impacto                                                                                                                  | Correção                                                                                                                           |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `database/` ausente do `pnpm-workspace.yaml`                                                                                                             | Todo comando `pnpm --filter @saas/database-migrations ...` (docs, scripts, CI) nunca funcionou                           | Adicionado ao workspace; `database` agora lint/typecheck/test/build                                                                |
+| 2   | `run-migrations.ts` importava `Migrator`/`FileMigrationProvider` de `kysely` em vez de `kysely/migration`                                                | Migrations nunca executavam (erro de import)                                                                             | Corrigido o subpath; adicionado lock via `pg_advisory_lock` e comando `migrate:plan` (dry-run)                                     |
+| 3   | `docker-compose.prod.yml` referenciava imagem `saas/migrate` sem `Dockerfile.migrate`                                                                    | Deploy de produção quebraria ao tentar migrar                                                                            | Criado `infra/docker/Dockerfile.migrate`                                                                                           |
+| 4   | Realtime sem endpoint `/health` apesar do healthcheck do Compose apontar para ele                                                                        | Healthcheck sempre falharia em produção                                                                                  | Criado `HealthModule`/`HealthController`/`HealthService` com readiness via ping no Redis                                           |
+| 5   | Handshake JWT do realtime só decodificava o payload em Base64, sem checar assinatura                                                                     | Qualquer pessoa podia forjar um token e se autenticar                                                                    | Substituído por `JoseJwtService` (`@saas/auth`, HS256 via `jose`) com verificação real                                             |
+| 6   | `backup.ts` gerava dump em texto plano, sem compressão nem criptografia, mas nomeava o arquivo `.sql.gz.enc`                                             | Contradiz diretamente os requisitos de segurança documentados (backup deve ser criptografado)                            | Implementado AES-256-GCM real + gzip; validado end-to-end contra PostgreSQL 18.4 descartável via Docker                            |
+| 7   | `restore.ts` fazia streaming do texto decifrado para o `psql` antes de validar a tag de autenticação GCM                                                 | Um backup corrompido/adulterado poderia ter SQL parcialmente executado antes do erro de integridade ser detectado        | Reescrito para decifrar e verificar a tag **antes** de qualquer SQL chegar ao `psql` — falha fecha sem executar nada               |
+| 8   | `apps/web/index.html` definia `X-Frame-Options`, `X-Content-Type-Options`, `Permissions-Policy` e `frame-ancestors` via `<meta http-equiv>`              | Navegadores ignoram esses headers via `<meta>` (confirmado com um teste real do Playwright) — falsa sensação de proteção | Removidas as tags `<meta>` inúteis; `nginx.conf` (que já tinha a maioria como header real) ganhou também `Content-Security-Policy` |
+| 9   | `apps/web` tinha script `test:e2e` mas nenhum Playwright configurado; script raiz `test:e2e` apontava para target Nx errado (`e2e` em vez de `test:e2e`) | E2E nunca rodava                                                                                                         | Criado `playwright.config.ts`, suíte de smoke (Chromium/Firefox/WebKit/mobile), corrigido o script raiz, adicionado job no CI      |
+| 10  | CI "secret scan" rodava `secretlint`, que **não é nem dependência do projeto**, com `\|\| true` silenciando qualquer falha                               | Nenhum secret scan real acontecia — falso senso de segurança, violação da regra "nunca esconda falhas"                   | Substituído por `gitleaks/gitleaks-action` real, sem silenciamento                                                                 |
+
+### 11.2 Itens que estavam genuinamente ausentes e foram implementados
+
+- **OpenTelemetry real**: `packages/observability/src/telemetry.ts` com `NodeSDK`, exporters OTLP HTTP para traces e métricas, instrumentação de HTTP/Fastify/pg. Wired em `api`, `realtime`, `worker`, `scheduler` via `instrumentation.ts` (import antes de tudo). Stack local opcional em `infra/docker/docker-compose.observability.yml` (otel-collector + Prometheus + Grafana).
+- **Kubernetes**: manifests completos em `infra/kubernetes/base/` (Deployments, Services, ConfigMap, HPA, PDB, NetworkPolicy deny-by-default, Job de migração, probes alinhadas aos health checks reais). Validado com `kubectl kustomize`; nunca aplicado a um cluster real (nenhum disponível neste ambiente).
+- **CI/CD supply chain**: jobs separados para `security` (audit, SAST via Semgrep, license check), `integration` (Postgres/Redis reais + teste de migração up/down/up + testes de integração da API), `containers` (build + Trivy scan + SBOM via Syft), `manifests` (validação de Kubernetes/Compose), `e2e` (Playwright), `openapi-contract` (placeholder documentado).
+- **Renovate**: `renovate.json` configurado (agrupamento, `minimumReleaseAge: 7 dias`, sem automerge de major, alertas de vulnerabilidade). Falta habilitar o app/bot no GitHub (ação externa).
+- **`@saas/http-client`**: cliente HTTP com proteção SSRF real (bloqueia IPs privados/loopback/link-local/metadata de nuvem via resolução DNS), timeout, retry com backoff exponencial + jitter (via `cockatiel`), e circuit breaker. Retry só para métodos idempotentes ou requisições com `Idempotency-Key`.
+- **`@saas/webhooks`**: verificação de assinatura HMAC-SHA256 inbound com janela de replay, assinatura outbound, e serviço de entrega com dead-letter após `maxAttempts`, usando `@saas/http-client`.
+- **Playwright**: suíte de smoke E2E rodando de fato nos 4 projetos (Chromium, Firefox, WebKit, mobile-Chrome) — 12/12 testes passando, incluindo o teste que capturou o bug de security headers (#8 acima).
+
+### 11.3 Quality Gates (rodados com Docker disponível nesta sessão)
+
+| Gate              | Comando                                    | Resultado                                               |
+| ----------------- | ------------------------------------------ | ------------------------------------------------------- |
+| Formatação        | `pnpm format:check`                        | Pass                                                    |
+| Lint              | `pnpm lint`                                | Pass (9 projetos + 12 dependências)                     |
+| Typecheck         | `pnpm typecheck`                           | Pass (20 projetos)                                      |
+| Testes unitários  | `pnpm test`                                | Pass                                                    |
+| Testes integração | `pnpm --filter @saas/api test:integration` | Pass — **Postgres/Redis reais**, não apenas scaffolding |
+| Testes E2E        | `pnpm --filter @saas/web test:e2e`         | Pass — 12/12, 4 browsers/viewports                      |
+| Build             | `pnpm build`                               | Pass                                                    |
+| Backup/restore    | Manual, ponta a ponta                      | Validado contra PostgreSQL 18.4 descartável             |
+| Manifests K8s     | `kubectl kustomize infra/kubernetes/base`  | Renderiza sem erro                                      |
+
+### 11.4 Bloqueios que precisam da sua ação
+
+1. **Identidade Git não configurada**: nem local nem global têm `user.name`/`user.email`; a regra do projeto proíbe que eu configure isso. **Nenhum commit existe no repositório ainda.** Rode:
+   ```
+   git config user.name "Seu Nome"
+   git config user.email "voce@exemplo.com"
+   ```
+   e então peça para eu fazer o commit inicial.
+2. **Renovate**: o app precisa ser instalado no GitHub (fora do meu alcance neste ambiente).
+3. **Docker Desktop**: precisou ser iniciado manualmente durante esta sessão para validar testes de integração, Playwright e backup/restore de verdade. Se for encerrado, esses comandos voltam a falhar até reiniciar.
+
+### 11.5 Ainda não realizado (fora do escopo desta rodada ou não verificável neste ambiente)
+
+- Testes de carga/spike/soak/caos (Redis indisponível, restart de container) — não executados; seria necessário um ambiente de staging real.
+- Manifests Kubernetes nunca aplicados a um cluster real.
+- Módulos de negócio (auth completo, tenants, billing, etc.) — fora do escopo da Fase 4/4B por instrução explícita.
+- Dashboards Grafana e alerting rules — apenas a infraestrutura de coleta (collector + Prometheus) foi criada.
+
+### 11.6 Não Realizado (repetido, mantendo consistência com a seção 9)
+
+- Não houve deploy.
+- Não houve push.
+- Não foi implementada funcionalidade de negócio.
+- Não houve commit (bloqueado por falta de identidade Git — ver 11.4).

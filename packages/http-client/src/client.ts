@@ -65,8 +65,7 @@ export function createSafeHttpClient(
       const method = (init?.method ?? "GET").toUpperCase();
       const isSafeToRetry =
         IDEMPOTENT_METHODS.has(method) ||
-        (init?.headers &&
-          new Headers(init.headers).has("idempotency-key"));
+        (init?.headers && new Headers(init.headers).has("idempotency-key"));
 
       const policy = isSafeToRetry ? resilientPolicy : nonRetryingPolicy;
 

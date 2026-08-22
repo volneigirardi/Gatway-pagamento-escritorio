@@ -15,25 +15,28 @@ This directory contains Architecture Decision Records.
 - A new decision that overrides an old one must be a new ADR that references the old one.
 - Never silently rewrite an accepted ADR.
 
-## Planned ADRs
+## Index (actual state, verified against `docs/adr/*.md` on disk)
 
-1. ADR-001 — Node.js 24 LTS + pnpm 11 + Nx
-2. ADR-002 — Modular monolith architecture
-3. ADR-003 — NestJS + Fastify
-4. ADR-004 — Kysely + `pg` instead of ORM
-5. ADR-005 — Database-per-tenant multi-tenancy
-6. ADR-006 — Email/password + TOTP MFA
-7. ADR-007 — JWT access + refresh tokens
-8. ADR-008 — BullMQ for job queues
-9. ADR-009 — Transactional outbox pattern
-10. ADR-010 — Socket.IO + Redis adapter
-11. ADR-011 — React 19 + Vite web stack
-12. ADR-012 — React Native + Expo mobile stack
-13. ADR-013 — Docker Swarm as first production platform
-14. ADR-014 — Kubernetes as evolution target
-15. ADR-015 — S3-compatible object storage abstraction
-16. ADR-016 — OpenTelemetry + Pino observability
-17. ADR-017 — Security baseline (Argon2id, AES-256-GCM, TLS, RLS)
-18. ADR-018 — Immutable audit logs per tenant
-19. ADR-019 — Pix/payment integration foundations
-20. ADR-020 — Radix + Tailwind design system
+| ADR     | Title                                | Status   |
+| ------- | ------------------------------------- | -------- |
+| ADR-004 | Monorepo tooling                      | Accepted |
+| ADR-005 | Backend framework and runtime         | Accepted |
+| ADR-006 | Design system approach                | Proposed |
+| ADR-007 | Cache and cookie policy               | Accepted |
+| ADR-008 | Authentication and Authorization Strategy | Accepted |
+| ADR-009 | Tenant Isolation Strategy             | Accepted |
+| ADR-010 | Database Connection Pooling           | Accepted |
+| ADR-011 | Rate Limiting                         | Accepted |
+| ADR-012 | Transactional Outbox Pattern          | Accepted |
+
+## Known Gap (found during Fase 5 foundation audit)
+
+`ADR-001` through `ADR-003` are referenced nowhere else in the repository,
+but several decisions that would logically precede ADR-004 (Node.js/pnpm/Nx
+choice, modular monolith shape, NestJS+Fastify) are already implemented and
+documented informally in `AGENTS.md` and `docs/project-context.md` without a
+corresponding ADR. This index previously listed a fictional ADR-001..020
+plan that did not match any file on disk — that placeholder list has been
+removed. Recommendation: backfill ADR-001..003 for the foundational
+stack/architecture/framework decisions next time one of them needs to be
+revisited, rather than leaving them undocumented as ADRs.

@@ -47,7 +47,10 @@ describe("webhook signatures", () => {
 
   it("rejects a signature signed with a different secret", () => {
     const rawBody = "{}";
-    const header = buildOutboundSignatureHeader("a-completely-different-secret!!", rawBody);
+    const header = buildOutboundSignatureHeader(
+      "a-completely-different-secret!!",
+      rawBody,
+    );
 
     expect(() =>
       verifyInboundWebhookSignature(SECRET, header, rawBody),

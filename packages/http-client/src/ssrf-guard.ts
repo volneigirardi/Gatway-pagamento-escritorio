@@ -12,25 +12,24 @@ export class SsrfBlockedError extends Error {
 }
 
 /** IPv4 ranges that must never be reached from server-initiated outbound calls. */
-const BLOCKED_IPV4_RANGES: { base: number[]; bits: number; label: string }[] =
-  [
-    { base: [0, 0, 0, 0], bits: 8, label: "current network" },
-    { base: [10, 0, 0, 0], bits: 8, label: "private (RFC1918)" },
-    { base: [100, 64, 0, 0], bits: 10, label: "carrier-grade NAT" },
-    { base: [127, 0, 0, 0], bits: 8, label: "loopback" },
-    { base: [169, 254, 0, 0], bits: 16, label: "link-local / cloud metadata" },
-    { base: [172, 16, 0, 0], bits: 12, label: "private (RFC1918)" },
-    { base: [192, 0, 0, 0], bits: 24, label: "IETF protocol assignments" },
-    { base: [192, 168, 0, 0], bits: 16, label: "private (RFC1918)" },
-    { base: [198, 18, 0, 0], bits: 15, label: "benchmark testing" },
-    { base: [224, 0, 0, 0], bits: 4, label: "multicast" },
-    { base: [240, 0, 0, 0], bits: 4, label: "reserved" },
-  ];
+const BLOCKED_IPV4_RANGES: { base: number[]; bits: number; label: string }[] = [
+  { base: [0, 0, 0, 0], bits: 8, label: "current network" },
+  { base: [10, 0, 0, 0], bits: 8, label: "private (RFC1918)" },
+  { base: [100, 64, 0, 0], bits: 10, label: "carrier-grade NAT" },
+  { base: [127, 0, 0, 0], bits: 8, label: "loopback" },
+  { base: [169, 254, 0, 0], bits: 16, label: "link-local / cloud metadata" },
+  { base: [172, 16, 0, 0], bits: 12, label: "private (RFC1918)" },
+  { base: [192, 0, 0, 0], bits: 24, label: "IETF protocol assignments" },
+  { base: [192, 168, 0, 0], bits: 16, label: "private (RFC1918)" },
+  { base: [198, 18, 0, 0], bits: 15, label: "benchmark testing" },
+  { base: [224, 0, 0, 0], bits: 4, label: "multicast" },
+  { base: [240, 0, 0, 0], bits: 4, label: "reserved" },
+];
 
 function ipv4ToInt(ip: string): number {
-  return ip
-    .split(".")
-    .reduce((acc, octet) => (acc << 8) + Number(octet), 0) >>> 0;
+  return (
+    ip.split(".").reduce((acc, octet) => (acc << 8) + Number(octet), 0) >>> 0
+  );
 }
 
 function isBlockedIpv4(ip: string): string | null {

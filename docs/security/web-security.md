@@ -17,6 +17,16 @@
 | Referrer-Policy           | strict-origin-when-cross-origin              |
 | Permissions-Policy        | restrict camera, microphone, geolocation     |
 
+`X-Frame-Options`, `X-Content-Type-Options`, `Permissions-Policy`, and the
+CSP `frame-ancestors` directive are only enforced by browsers as real HTTP
+response headers — a `<meta http-equiv>` tag is silently ignored for these
+(confirmed via a Playwright console-error assertion in
+`apps/web/e2e/smoke.spec.ts`, caught during Fase 4). They are set as
+headers in `infra/docker/nginx.conf`; `apps/web/index.html` keeps only the
+CSP directives and `Referrer-Policy` that are meaningfully enforced via
+`<meta>`, as a fallback for contexts serving the static build without the
+header layer (e.g. local `vite preview`).
+
 ## Cookies
 
 - Auth refresh cookie: `__Host-refresh` with Secure, HttpOnly, SameSite=Strict, Path=/.

@@ -44,6 +44,11 @@ pnpm-debug.log*
 # Testing
 coverage/
 .nyc_output/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+backups/
 
 # Docker volumes
 volumes/

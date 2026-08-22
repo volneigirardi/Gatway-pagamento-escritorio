@@ -4,11 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-    <meta http-equiv="X-Frame-Options" content="DENY" />
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
-    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none';" />
+    <!--
+      X-Content-Type-Options, X-Frame-Options, Permissions-Policy, and the
+      CSP `frame-ancestors` directive are ignored by browsers when delivered
+      via <meta> (per spec) — they are set as real HTTP response headers by
+      the serving layer instead (infra/docker/nginx.conf for the container
+      image; configure equivalently on any other static host/CDN). Only
+      Referrer-Policy and the non-frame-ancestors CSP directives below are
+      meaningfully enforced via <meta>, kept here as defense-in-depth for
+      contexts that serve these static files without the header layer
+      (e.g. `vite preview` in local development).
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self';" />
     <title>SaaS Enterprise</title>
   </head>
   <body>

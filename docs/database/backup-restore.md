@@ -54,7 +54,7 @@ encryption with gzip compression:
 - `pg_dump`/`psql` major version must match (or be compatible with) the
   target PostgreSQL server version; mismatched client/server majors fail
   fast with a clear `pg_dump: error: aborting because of server version
-  mismatch` message.
+mismatch` message.
 
 ## RPO/RTO
 

@@ -21,7 +21,9 @@ const payload: WebhookDeliveryPayload = {
 
 describe("deliverWebhook", () => {
   it("marks delivery successful on 2xx response", async () => {
-    const fetch = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(new Response("ok", { status: 200 }));
     const result = await deliverWebhook(subscription, payload, 1, {
       httpClient: { fetch },
     });
@@ -40,7 +42,9 @@ describe("deliverWebhook", () => {
   });
 
   it("marks as failed (not dead_letter) below maxAttempts on non-2xx", async () => {
-    const fetch = vi.fn().mockResolvedValue(new Response("error", { status: 500 }));
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(new Response("error", { status: 500 }));
     const result = await deliverWebhook(subscription, payload, 1, {
       httpClient: { fetch },
       maxAttempts: 8,
@@ -51,7 +55,9 @@ describe("deliverWebhook", () => {
   });
 
   it("marks as dead_letter once maxAttempts is reached", async () => {
-    const fetch = vi.fn().mockResolvedValue(new Response("error", { status: 500 }));
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(new Response("error", { status: 500 }));
     const result = await deliverWebhook(subscription, payload, 8, {
       httpClient: { fetch },
       maxAttempts: 8,

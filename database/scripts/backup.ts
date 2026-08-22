@@ -117,7 +117,9 @@ async function backup(): Promise<void> {
   const authTag = cipher.getAuthTag();
   fs.writeFileSync(outputPath, Buffer.concat([iv, ciphertext, authTag]));
 
-  console.log(`Backup written to ${outputPath} (AES-256-GCM encrypted, gzip compressed)`);
+  console.log(
+    `Backup written to ${outputPath} (AES-256-GCM encrypted, gzip compressed)`,
+  );
 }
 
 void backup();

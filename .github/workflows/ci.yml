@@ -137,6 +137,41 @@ jobs:
           CORS_ORIGINS: http://localhost:3004
           NODE_ENV: test
 
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [quality-gates]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @saas/web exec playwright install --with-deps chromium firefox webkit
+
+      - name: Build web app
+        run: pnpm --filter @saas/web build
+
+      - name: E2E smoke tests (Chromium, Firefox, WebKit, mobile viewport)
+        run: pnpm --filter @saas/web test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
   containers:
     runs-on: ubuntu-latest
     needs: [quality-gates]
