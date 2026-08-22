@@ -29,17 +29,21 @@ async function restore(backupFile: string): Promise<void> {
   }
   const encryptionKey = loadEncryptionKey();
 
-  // Layout written by backup.ts: [12-byte IV][16-byte GCM auth tag][ciphertext]
+  // Layout written by backup.ts: [12-byte IV][ciphertext][16-byte GCM auth tag]
+  const fileSize = fs.statSync(backupFile).size;
   const fd = fs.openSync(backupFile, "r");
   const iv = Buffer.alloc(12);
   const authTag = Buffer.alloc(16);
   fs.readSync(fd, iv, 0, 12, 0);
-  fs.readSync(fd, authTag, 0, 16, 12);
+  fs.readSync(fd, authTag, 0, 16, fileSize - 16);
   fs.closeSync(fd);
 
   const decipher = createDecipheriv("aes-256-gcm", encryptionKey, iv);
   decipher.setAuthTag(authTag);
-  const ciphertextStream = fs.createReadStream(backupFile, { start: 28 });
+  const ciphertextStream = fs.createReadStream(backupFile, {
+    start: 12,
+    end: fileSize - 16 - 1,
+  });
   const gunzip = createGunzip();
 
   const parsed = new URL(connectionString);

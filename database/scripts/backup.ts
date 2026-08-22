@@ -3,7 +3,6 @@ import { randomUUID, createCipheriv, randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { pipeline } from "node:stream/promises";
 import { createGzip } from "node:zlib";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -45,11 +44,19 @@ async function backup(): Promise<void> {
   const parsed = new URL(connectionString);
   const env = { ...process.env, PGPASSWORD: parsed.password };
 
-  // File layout: [12-byte IV][16-byte GCM auth tag][gzip(pg_dump output) ciphertext]
+  // File layout: [12-byte IV][gzip(pg_dump output) ciphertext][16-byte GCM auth tag].
+  // The tag is only known once encryption finishes, so it is appended last
+  // rather than seeked-and-patched into a header (simpler and safe across
+  // filesystems, including networked bind mounts).
+  //
+  // Known limitation: ciphertext is buffered in memory before being written,
+  // trading streaming-to-disk for a single-pass, seek-free file format. This
+  // is acceptable for the foundation phase; revisit with a chunked AEAD
+  // framing (e.g. fixed-size encrypted chunks) before backing up databases
+  // too large to buffer.
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", encryptionKey, iv);
   const gzip = createGzip();
-  const output = fs.createWriteStream(outputPath);
 
   const proc = execFile(
     "pg_dump",
@@ -78,29 +85,37 @@ async function backup(): Promise<void> {
     throw new Error("pg_dump did not provide a stdout stream");
   }
 
-  output.write(iv);
-  // Placeholder for the auth tag, patched in after the cipher finishes.
-  const authTagPlaceholderOffset = iv.length;
-  output.write(Buffer.alloc(16));
-
-  await pipeline(proc.stdout, gzip, cipher, output);
-
-  const exitCode: number = await new Promise((resolve, reject) => {
-    proc.on("close", (code) => {
-      resolve(code ?? 1);
-    });
-    proc.on("error", reject);
+  const chunks: Buffer[] = [];
+  cipher.on("data", (chunk: Buffer) => {
+    chunks.push(chunk);
   });
 
+  const encryptionDone = new Promise<void>((resolve, reject) => {
+    cipher.on("end", resolve);
+    cipher.on("error", reject);
+    gzip.on("error", reject);
+    proc.stdout?.on("error", reject);
+  });
+
+  proc.stdout.pipe(gzip).pipe(cipher);
+
+  const [, exitCode] = await Promise.all([
+    encryptionDone,
+    new Promise<number>((resolve, reject) => {
+      proc.on("close", (code) => {
+        resolve(code ?? 1);
+      });
+      proc.on("error", reject);
+    }),
+  ]);
+  const ciphertext = Buffer.concat(chunks);
+
   if (exitCode !== 0) {
-    fs.rmSync(outputPath, { force: true });
     throw new Error(`pg_dump failed (exit ${String(exitCode)}): ${stderr}`);
   }
 
   const authTag = cipher.getAuthTag();
-  const fd = fs.openSync(outputPath, "r+");
-  fs.writeSync(fd, authTag, 0, authTag.length, authTagPlaceholderOffset);
-  fs.closeSync(fd);
+  fs.writeFileSync(outputPath, Buffer.concat([iv, ciphertext, authTag]));
 
   console.log(`Backup written to ${outputPath} (AES-256-GCM encrypted, gzip compressed)`);
 }
