@@ -83,16 +83,14 @@ export async function down(db: Kysely<unknown>): Promise<void> {
     DROP INDEX IF EXISTS uq_payments_tenant_provider_reference;
     CREATE UNIQUE INDEX uq_payments_tenant_provider_reference
     ON payments (tenant_id, provider, external_reference)
-    WHERE deleted_at IS NULL
-      AND external_reference IS NOT NULL
+    WHERE external_reference IS NOT NULL
   `.execute(db);
 
   await sql`
     DROP INDEX IF EXISTS uq_subscriptions_tenant_current;
     CREATE UNIQUE INDEX uq_subscriptions_tenant_current
     ON subscriptions (tenant_id)
-    WHERE deleted_at IS NULL
-      AND status IN ('pending', 'trialing', 'active', 'past_due', 'suspended')
+    WHERE status IN ('pending', 'trialing', 'active', 'past_due', 'suspended')
   `.execute(db);
 
   await sql`
