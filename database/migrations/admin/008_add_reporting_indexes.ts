@@ -1,5 +1,14 @@
 import { type Kysely, sql } from "kysely";
 
+/**
+ * Reporting support indexes for the admin catalog.
+ *
+ * These indexes are created with non-concurrent DDL because this migration is
+ * intended for the initial foundation provisioning phase, when the admin
+ * catalog is empty or very small. For a live production catalog with write
+ * traffic, this migration must be run inside a controlled maintenance window
+ * (or a separate concurrent-index build process) to avoid blocking writers.
+ */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await sql`
     CREATE INDEX idx_payments_paid_at
@@ -36,13 +45,30 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .on("subscriptions")
     .columns(["tenant_id", "created_at", "id"])
     .execute();
-  await db.schema
-    .createIndex("idx_subscriptions_canceled")
-    .on("subscriptions")
-    .column("canceled_at")
-    .execute();
   await sql`
-    CREATE UNIQUE INDEX uq_plan_prices_active
+    CREATE INDEX idx_subscriptions_canceled
+    ON subscriptions (canceled_at)
+    WHERE canceled_at IS NOT NULL
+  `.execute(db);
+  await sql`
+    DO $validate_plan_prices$
+    BEGIN
+      IF EXISTS (
+        SELECT 1
+        FROM plan_prices
+        WHERE effective_to IS NULL
+        GROUP BY plan_id, currency, billing_interval
+        HAVING count(*) > 1
+        LIMIT 1
+      ) THEN
+        RAISE EXCEPTION 'Duplicate active plan prices exist for the same plan, currency and interval; resolve before applying uq_plan_prices_active';
+      END IF;
+    END
+    $validate_plan_prices$;
+  `.execute(db);
+
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_plan_prices_active
     ON plan_prices (plan_id, currency, billing_interval)
     WHERE effective_to IS NULL
   `.execute(db);
@@ -53,7 +79,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   `.execute(db);
   await sql`
     CREATE INDEX idx_invoices_collectible_due
-    ON invoices (due_date, tenant_id)
+    ON invoices (tenant_id, due_date)
     WHERE status IN ('open', 'overdue')
   `.execute(db);
   await db.schema

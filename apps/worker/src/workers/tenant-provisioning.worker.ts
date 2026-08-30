@@ -290,9 +290,7 @@ export class TenantProvisioningWorker implements OnApplicationShutdown {
       const grantStatement = formattedGrant.rows[0]?.statement;
       if (!grantStatement) throw new Error("Database grant statement failed");
       await tenantProvisioner.query(grantStatement);
-      await tenantProvisioner.query(
-        "REVOKE CREATE ON SCHEMA public FROM PUBLIC",
-      );
+      await tenantProvisioner.query("REVOKE ALL ON SCHEMA public FROM PUBLIC");
       await tenantProvisioner.query(
         "GRANT USAGE ON SCHEMA public TO blupo_app, blupo_migrator",
       );

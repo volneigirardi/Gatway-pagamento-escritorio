@@ -50,10 +50,10 @@ const httpConfigSchema = z.object({
 const databaseConfigSchema = z.object({
   DATABASE_URL: z.string().url(),
   DATABASE_POOL_MIN: z.coerce.number().int().min(0).default(1),
-  DATABASE_POOL_MAX: z.coerce.number().int().min(1).default(5),
+  DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(5).default(5),
   DATABASE_TIMEOUT: z.coerce.number().int().min(1000).default(30000),
-  TENANT_POOL_CACHE_MAX: z.coerce.number().int().min(1).max(100).default(10),
-  TENANT_DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(5).default(1),
+  TENANT_POOL_CACHE_MAX: z.coerce.number().int().min(1).max(10).default(10),
+  TENANT_DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(1).default(1),
 });
 
 const redisConfigSchema = z.object({

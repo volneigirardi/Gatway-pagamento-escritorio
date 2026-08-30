@@ -12,7 +12,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .alterTable("tenants")
     .addColumn("legal_name", "varchar(255)")
     .addColumn("trade_name", "varchar(255)")
-    .addColumn("tax_id", "varchar(14)", (column) => column.unique())
+    .addColumn("tax_id", "varchar(14)")
     .addColumn("contact_email", "varchar(320)")
     .addColumn("plan_id", "uuid", (column) =>
       column.references("plans.id").onDelete("restrict"),
@@ -30,7 +30,25 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .execute();
 
   await sql`
+    DO $validate_tax_id$
+    BEGIN
+      IF EXISTS (
+        SELECT 1
+        FROM tenants
+        WHERE tax_id IS NOT NULL
+        GROUP BY tax_id
+        HAVING count(*) > 1
+        LIMIT 1
+      ) THEN
+        RAISE EXCEPTION 'Duplicate non-null tax_id values exist; resolve before applying uq_tenants_tax_id';
+      END IF;
+    END
+    $validate_tax_id$;
+  `.execute(db);
+
+  await sql`
     ALTER TABLE tenants
+      ADD CONSTRAINT uq_tenants_tax_id UNIQUE (tax_id),
       ADD CONSTRAINT chk_tenants_status
         CHECK (status IN ('draft', 'provisioning', 'pending_admin', 'active', 'suspended', 'failed', 'archived')),
       ADD CONSTRAINT chk_tenants_provisioning_status
@@ -196,10 +214,7 @@ export async function down(db: Kysely<unknown>): Promise<void> {
     .ifExists()
     .execute();
 
-  await db.schema
-    .dropIndex("idx_tenants_plan_status")
-    .ifExists()
-    .execute();
+  await db.schema.dropIndex("idx_tenants_plan_status").ifExists().execute();
 
   await sql`
     DROP INDEX IF EXISTS idx_tenants_status_created;

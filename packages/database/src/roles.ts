@@ -79,7 +79,7 @@ export async function bootstrapDatabaseRoles(
       END
       $database_grants$;
 
-      REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+      REVOKE ALL ON SCHEMA public FROM PUBLIC;
       GRANT USAGE ON SCHEMA public TO blupo_app, blupo_migrator;
       GRANT CREATE ON SCHEMA public TO blupo_migrator;
     `);
@@ -233,6 +233,20 @@ export async function grantRuntimePrivileges<DB>(
           object_record.object_name
         );
       END LOOP;
+
+      REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC;
+      REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM PUBLIC;
+      REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
+
+      IF EXISTS (
+        SELECT 1
+        FROM pg_proc p
+        JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'public'
+          AND p.proname = 'update_updated_at_column'
+      ) THEN
+        EXECUTE 'GRANT EXECUTE ON FUNCTION public.update_updated_at_column() TO blupo_app';
+      END IF;
     END
     $grants$;
   `.execute(db);

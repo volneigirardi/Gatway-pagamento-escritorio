@@ -123,11 +123,6 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn("updated_at", "timestamptz", (column) =>
       column.notNull().defaultTo(sql`now()`),
     )
-    .addUniqueConstraint("uq_payments_tenant_provider_reference", [
-      "tenant_id",
-      "provider",
-      "external_reference",
-    ])
     .addCheckConstraint(
       "chk_payments_method",
       sql`method IN ('manual', 'bank_transfer', 'pix', 'card', 'other')`,
@@ -139,6 +134,12 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addCheckConstraint("chk_payments_currency", sql`currency ~ '^[A-Z]{3}$'`)
     .addCheckConstraint("chk_payments_amount", sql`amount_cents > 0`)
     .execute();
+
+  await sql`
+    CREATE UNIQUE INDEX uq_payments_tenant_provider_reference
+      ON payments (tenant_id, provider, external_reference)
+      WHERE external_reference IS NOT NULL
+  `.execute(db);
 
   await db.schema
     .createIndex("idx_payments_status_created")

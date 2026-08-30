@@ -206,7 +206,7 @@ describe("admin catalog migrations", () => {
 
       INSERT INTO payments (
         id, tenant_id, invoice_id, method, status, currency, amount_cents,
-        paid_at
+        provider, external_reference, paid_at
       ) VALUES (
         '60000000-0000-4000-8000-000000000001',
         '20000000-0000-4000-8000-000000000001',
@@ -215,9 +215,98 @@ describe("admin catalog migrations", () => {
         'paid',
         'BRL',
         19900,
+        'bank_transfer',
+        'TXN-000001',
         now()
       )
     `.execute(db);
+
+    await sql`
+      INSERT INTO tenants (
+        id, name, slug, database_name, database_host, status, plan, plan_id,
+        provisioning_status
+      ) VALUES (
+        '20000000-0000-4000-8000-000000000002',
+        'Tenant B',
+        'tenant-b',
+        'tenant_20000000000040008000000000000002',
+        'postgres',
+        'active',
+        'professional',
+        '10000000-0000-4000-8000-000000000001',
+        'completed'
+      );
+
+      INSERT INTO subscriptions (
+        id, tenant_id, plan_id, plan_price_id, status, currency,
+        billing_interval, amount_cents, current_period_start,
+        current_period_end
+      ) VALUES (
+        '40000000-0000-4000-8000-000000000002',
+        '20000000-0000-4000-8000-000000000002',
+        '10000000-0000-4000-8000-000000000001',
+        '10000000-0000-4000-8000-000000000002',
+        'active',
+        'BRL',
+        'monthly',
+        19900,
+        now(),
+        now() + interval '1 month'
+      );
+
+      INSERT INTO invoices (
+        id, tenant_id, subscription_id, number, status, currency,
+        subtotal_cents, discount_cents, tax_cents, total_cents, due_date
+      ) VALUES (
+        '50000000-0000-4000-8000-000000000002',
+        '20000000-0000-4000-8000-000000000002',
+        '40000000-0000-4000-8000-000000000002',
+        'INV-000002',
+        'open',
+        'BRL',
+        19900,
+        0,
+        0,
+        19900,
+        current_date + 7
+      );
+
+      INSERT INTO payments (
+        id, tenant_id, invoice_id, method, status, currency, amount_cents,
+        provider, external_reference, paid_at
+      ) VALUES (
+        '60000000-0000-4000-8000-000000000002',
+        '20000000-0000-4000-8000-000000000002',
+        '50000000-0000-4000-8000-000000000002',
+        'manual',
+        'paid',
+        'BRL',
+        19900,
+        'bank_transfer',
+        'TXN-000001',
+        now()
+      )
+    `.execute(db);
+
+    await expect(
+      sql`
+        INSERT INTO payments (
+          id, tenant_id, invoice_id, method, status, currency, amount_cents,
+          provider, external_reference, paid_at
+        ) VALUES (
+          '60000000-0000-4000-8000-000000000003',
+          '20000000-0000-4000-8000-000000000001',
+          '50000000-0000-4000-8000-000000000001',
+          'manual',
+          'paid',
+          'BRL',
+          19900,
+          'bank_transfer',
+          'TXN-000001',
+          now()
+        )
+      `.execute(db),
+    ).rejects.toThrow(/uq_payments_tenant_provider_reference/iu);
 
     await expect(
       sql`
