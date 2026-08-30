@@ -39,6 +39,7 @@
     "docker:down": "docker compose -f infra/docker/docker-compose.dev.yml down",
     "docker:logs": "docker compose -f infra/docker/docker-compose.dev.yml logs -f",
     "quality": "pnpm lint && pnpm typecheck && pnpm test",
+    "commit": "node .devin/scripts/auto-commit.js",
     "affected": "nx affected -t lint,typecheck,test",
     "prepare": "node -e \"process.env.CI || console.log('skipping husky install')\""
   },
