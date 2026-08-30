@@ -25,6 +25,7 @@ export class BillingRepository {
       .selectAll()
       .where("id", "=", subscriptionId)
       .where("tenant_id", "=", tenantId)
+      .where("deleted_at", "is", null)
       .executeTakeFirst();
   }
 
@@ -71,6 +72,7 @@ export class BillingRepository {
       .insertInto("invoice_items")
       .values(
         input.items.map((item) => ({
+          tenant_id: input.tenantId,
           invoice_id: invoice.id,
           description: item.description,
           quantity: item.quantity,
@@ -92,6 +94,7 @@ export class BillingRepository {
       .selectAll()
       .where("id", "=", invoiceId)
       .where("tenant_id", "=", tenantId)
+      .where("deleted_at", "is", null)
       .forUpdate()
       .executeTakeFirst();
   }
@@ -99,12 +102,15 @@ export class BillingRepository {
   async paidAmountCents(
     transaction: Transaction<AdminDatabase>,
     invoiceId: string,
+    tenantId: string,
   ): Promise<number> {
     const result = await transaction
       .selectFrom("payments")
       .select(sql<string>`coalesce(sum(amount_cents), 0)`.as("total"))
+      .where("tenant_id", "=", tenantId)
       .where("invoice_id", "=", invoiceId)
       .where("status", "=", "paid")
+      .where("deleted_at", "is", null)
       .executeTakeFirstOrThrow();
     return toSafeInteger(result.total, "paid amount");
   }
@@ -143,12 +149,15 @@ export class BillingRepository {
   async markInvoicePaid(
     transaction: Transaction<AdminDatabase>,
     invoiceId: string,
+    tenantId: string,
     paidAt: Date,
   ): Promise<void> {
     await transaction
       .updateTable("invoices")
       .set({ status: "paid", paid_at: paidAt })
+      .where("tenant_id", "=", tenantId)
       .where("id", "=", invoiceId)
+      .where("deleted_at", "is", null)
       .execute();
   }
 
@@ -164,7 +173,8 @@ export class BillingRepository {
       .selectFrom("invoices")
       .innerJoin("tenants", "tenants.id", "invoices.tenant_id")
       .selectAll("invoices")
-      .select("tenants.name as tenant_name");
+      .select("tenants.name as tenant_name")
+      .where("invoices.deleted_at", "is", null);
     if (input.tenantId) {
       query = query.where("invoices.tenant_id", "=", input.tenantId);
     }
@@ -219,7 +229,8 @@ export class BillingRepository {
       .selectFrom("payments")
       .innerJoin("tenants", "tenants.id", "payments.tenant_id")
       .selectAll("payments")
-      .select("tenants.name as tenant_name");
+      .select("tenants.name as tenant_name")
+      .where("payments.deleted_at", "is", null);
     if (input.tenantId) {
       query = query.where("payments.tenant_id", "=", input.tenantId);
     }
@@ -253,7 +264,8 @@ export class BillingRepository {
       .selectFrom("subscriptions")
       .innerJoin("tenants", "tenants.id", "subscriptions.tenant_id")
       .selectAll("subscriptions")
-      .select("tenants.name as tenant_name");
+      .select("tenants.name as tenant_name")
+      .where("subscriptions.deleted_at", "is", null);
     if (input.tenantId) {
       query = query.where("subscriptions.tenant_id", "=", input.tenantId);
     }

@@ -32,6 +32,7 @@ This directory contains Architecture Decision Records.
 | ADR-014 | PostgreSQL Runtime, Migration, and Provisioning Roles | Accepted |
 | ADR-015 | Unified Identity Directory and Authorization Realms   | Accepted |
 | ADR-016 | Mandatory PostgreSQL DBA Review Gate                  | Accepted |
+| ADR-017 | Admin Catalog Tenant Isolation                        | Accepted |
 
 ## Known Gap (found during Fase 5 foundation audit)
 

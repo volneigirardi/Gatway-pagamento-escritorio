@@ -77,6 +77,7 @@ export class TenantPortalService {
           "plan.name as plan_name",
         ])
         .where("subscription.tenant_id", "=", context.tenantId)
+        .where("subscription.deleted_at", "is", null)
         .orderBy("subscription.created_at", "desc")
         .executeTakeFirst(),
     ]);

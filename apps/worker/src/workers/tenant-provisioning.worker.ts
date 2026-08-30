@@ -520,6 +520,7 @@ export class TenantProvisioningWorker implements OnApplicationShutdown {
           .select(["id", "trial_ends_at"])
           .where("tenant_id", "=", row.tenantId)
           .where("status", "=", "pending")
+          .where("deleted_at", "is", null)
           .executeTakeFirst();
         if (subscription) {
           await transaction
@@ -533,6 +534,7 @@ export class TenantProvisioningWorker implements OnApplicationShutdown {
               current_period_start: new Date(),
             })
             .where("id", "=", subscription.id)
+            .where("deleted_at", "is", null)
             .execute();
         }
         await transaction

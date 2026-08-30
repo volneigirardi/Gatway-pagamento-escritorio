@@ -228,6 +228,7 @@ export class BillingService {
           const paidBefore = await this.repository.paidAmountCents(
             transaction,
             invoice.id,
+            invoice.tenant_id,
           );
           if (
             input.status === "paid" &&
@@ -257,6 +258,7 @@ export class BillingService {
             await this.repository.markInvoicePaid(
               transaction,
               invoice.id,
+              invoice.tenant_id,
               occurredAt,
             );
           }

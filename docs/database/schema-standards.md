@@ -26,8 +26,9 @@
 
 ## Row Level Security
 
-- Enable RLS on every tenant table.
-- Policy: `tenant_isolation` allowing operations only when `tenant_id = current_setting('app.current_tenant')::uuid`.
+- Enable RLS on tenant database tables unless explicitly exempted by ADR-017 (admin catalog).
+- Admin catalog tenant tables use application-level `tenant_id` predicates and composite tenant-scoped FKs as the primary isolation mechanism; see ADR-017.
+- Where RLS is enabled, policy: `tenant_isolation` allowing operations only when `tenant_id = current_setting('app.current_tenant')::uuid`.
 - Bypass reserved to migration/superuser roles.
 
 ## Naming

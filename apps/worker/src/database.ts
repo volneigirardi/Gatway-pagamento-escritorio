@@ -96,8 +96,10 @@ export interface WorkerAdminDatabase {
     status:
       "pending" | "trialing" | "active" | "past_due" | "suspended" | "canceled";
     trial_ends_at: Date | null;
+    canceled_at: Date | null;
     current_period_start: Date;
     current_period_end: Date;
+    deleted_at: Date | null;
     updated_at: Generated<Date>;
   };
   platform_audit_logs: {

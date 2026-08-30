@@ -26,11 +26,13 @@ export class ReportingRepository {
         SELECT id, total_cents
         FROM invoices
         WHERE status IN ('open', 'overdue')
+          AND deleted_at IS NULL
       ), paid_by_invoice AS (
         SELECT payment.invoice_id, sum(payment.amount_cents) AS paid_cents
         FROM payments payment
         INNER JOIN collectible invoice ON invoice.id = payment.invoice_id
         WHERE payment.status = 'paid'
+          AND payment.deleted_at IS NULL
         GROUP BY payment.invoice_id
       )
       SELECT
@@ -43,15 +45,17 @@ export class ReportingRepository {
           )), 0)::bigint
           FROM subscriptions
           WHERE status IN ('active', 'past_due')
+            AND deleted_at IS NULL
         ) AS mrr_cents,
         (SELECT count(*)::int FROM tenants WHERE status = 'active') AS active_tenants,
-        (SELECT count(DISTINCT tenant_id)::int FROM subscriptions WHERE status = 'trialing') AS trialing_tenants,
+        (SELECT count(DISTINCT tenant_id)::int FROM subscriptions WHERE status = 'trialing' AND deleted_at IS NULL) AS trialing_tenants,
         (SELECT count(*)::int FROM tenants WHERE status = 'suspended') AS suspended_tenants,
         (SELECT count(*)::int FROM tenants WHERE created_at >= ${from} AND created_at < ${to}) AS new_tenants,
         (
           SELECT coalesce(sum(amount_cents), 0)::bigint
           FROM payments
           WHERE status = 'paid' AND paid_at >= ${from} AND paid_at < ${to}
+            AND deleted_at IS NULL
         ) AS received_cents,
         (
           SELECT coalesce(sum(greatest(i.total_cents - coalesce(p.paid_cents, 0), 0)), 0)::bigint
@@ -61,19 +65,23 @@ export class ReportingRepository {
         (
           SELECT count(*)::int FROM payments
           WHERE status = 'paid' AND paid_at >= ${from} AND paid_at < ${to}
+            AND deleted_at IS NULL
         ) AS paid_attempts,
         (
           SELECT count(*)::int FROM payments
           WHERE status = 'failed' AND failed_at >= ${from} AND failed_at < ${to}
+            AND deleted_at IS NULL
         ) AS failed_attempts,
         (
           SELECT count(*)::int FROM subscriptions
           WHERE canceled_at >= ${from} AND canceled_at < ${to}
+            AND deleted_at IS NULL
         ) AS canceled_subscriptions,
         (
           SELECT count(*)::int FROM subscriptions
           WHERE created_at < ${from}
             AND (canceled_at IS NULL OR canceled_at >= ${from})
+            AND deleted_at IS NULL
         ) AS active_at_period_start
     `.execute(this.database.db);
     return (
@@ -125,6 +133,7 @@ export class ReportingRepository {
           WHERE pay.status = 'paid'
             AND pay.paid_at >= p.period_start
             AND pay.paid_at < p.period_start + interval '1 month'
+            AND pay.deleted_at IS NULL
         ), 0)::bigint AS received_cents,
         coalesce((
           SELECT count(*)::int
@@ -142,6 +151,7 @@ export class ReportingRepository {
           FROM subscriptions s
           WHERE s.created_at < p.period_start + interval '1 month'
             AND (s.canceled_at IS NULL OR s.canceled_at >= p.period_start)
+            AND s.deleted_at IS NULL
         ), 0)::bigint AS subscription_value_cents
       FROM periods p
       ORDER BY p.period_start
@@ -179,6 +189,7 @@ export class ReportingRepository {
       SELECT status, count(*)::int AS total, coalesce(sum(amount_cents), 0)::bigint AS amount_cents
       FROM payments
       WHERE created_at >= ${from} AND created_at < ${to}
+        AND deleted_at IS NULL
       GROUP BY status
       ORDER BY status
     `.execute(this.database.db);
@@ -205,6 +216,7 @@ export class ReportingRepository {
         .selectFrom("invoices")
         .select(["id", "number", "tenant_id", "total_cents", "due_date"])
         .where("status", "in", ["open", "overdue"])
+        .where("deleted_at", "is", null)
         .where("due_date", "<", new Date().toISOString().slice(0, 10))
         .orderBy("due_date", "asc")
         .limit(5)

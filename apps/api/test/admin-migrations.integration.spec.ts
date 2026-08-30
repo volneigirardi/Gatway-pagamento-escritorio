@@ -65,7 +65,7 @@ describe("admin catalog migrations", () => {
     const firstUp = await migrator.migrateToLatest();
     expect(firstUp.error).toBeUndefined();
     expect(firstUp.results?.at(-1)?.migrationName).toBe(
-      "008_add_reporting_indexes",
+      "010_harden_billing_residuals",
     );
     await grantRuntimePrivileges(db);
     const runtimePrivileges = await sql<{ allowed: boolean }>`
@@ -194,9 +194,10 @@ describe("admin catalog migrations", () => {
       );
 
       INSERT INTO invoice_items (
-        id, invoice_id, description, quantity, unit_amount_cents, total_cents
+        id, tenant_id, invoice_id, description, quantity, unit_amount_cents, total_cents
       ) VALUES (
         '50000000-0000-4000-8000-000000000002',
+        '20000000-0000-4000-8000-000000000001',
         '50000000-0000-4000-8000-000000000001',
         'Professional monthly plan',
         1,
@@ -342,14 +343,73 @@ describe("admin catalog migrations", () => {
       `.execute(db),
     ).rejects.toThrow();
 
+    await expect(
+      sql`
+        INSERT INTO invoice_items (
+          id, tenant_id, invoice_id, description, quantity, unit_amount_cents, total_cents
+        ) VALUES (
+          '70000000-0000-4000-8000-000000000001',
+          '20000000-0000-4000-8000-000000000001',
+          '50000000-0000-4000-8000-000000000002',
+          'Cross-tenant item',
+          1,
+          1000,
+          1000
+        )
+      `.execute(db),
+    ).rejects.toThrow(/fk_invoice_items_tenant_invoice/iu);
+
+    await expect(
+      sql`
+        INSERT INTO payments (
+          id, tenant_id, invoice_id, method, status, currency, amount_cents,
+          provider, external_reference, paid_at
+        ) VALUES (
+          '70000000-0000-4000-8000-000000000002',
+          '20000000-0000-4000-8000-000000000001',
+          '50000000-0000-4000-8000-000000000002',
+          'manual',
+          'paid',
+          'BRL',
+          1000,
+          'bank_transfer',
+          'TXN-000002',
+          now()
+        )
+      `.execute(db),
+    ).rejects.toThrow(/fk_payments_tenant_invoice/iu);
+
+    await expect(
+      sql`
+        INSERT INTO invoices (
+          id, tenant_id, subscription_id, number, status, currency,
+          subtotal_cents, discount_cents, tax_cents, total_cents, due_date
+        ) VALUES (
+          '70000000-0000-4000-8000-000000000003',
+          '20000000-0000-4000-8000-000000000002',
+          '40000000-0000-4000-8000-000000000001',
+          'INV-000003',
+          'open',
+          'BRL',
+          19900,
+          0,
+          0,
+          19900,
+          current_date + 7
+        )
+      `.execute(db),
+    ).rejects.toThrow(/fk_invoices_subscription/iu);
+
     const downNames: string[] = [];
-    for (let index = 0; index < 8; index += 1) {
+    for (let index = 0; index < 10; index += 1) {
       const down = await migrator.migrateDown();
       expect(down.error).toBeUndefined();
       const name = down.results?.[0]?.migrationName;
       if (name) downNames.push(name);
     }
     expect(downNames).toEqual([
+      "010_harden_billing_residuals",
+      "009_fix_billing_residuals",
       "008_add_reporting_indexes",
       "007_create_platform_authorization",
       "006_create_billing_records",
@@ -367,7 +427,7 @@ describe("admin catalog migrations", () => {
 
     const secondUp = await migrator.migrateToLatest();
     expect(secondUp.error).toBeUndefined();
-    expect(secondUp.results).toHaveLength(8);
+    expect(secondUp.results).toHaveLength(10);
   });
 
   it("blocks migration 005 rollback while a tenant is still provisioning", async () => {
@@ -382,7 +442,7 @@ describe("admin catalog migrations", () => {
       )
     `.execute(db);
 
-    for (let index = 0; index < 3; index += 1) {
+    for (let index = 0; index < 5; index += 1) {
       const down = await migrator.migrateDown();
       expect(down.error).toBeUndefined();
     }
@@ -395,6 +455,6 @@ describe("admin catalog migrations", () => {
     await db.deleteFrom("tenants").where("id", "=", tenantId).execute();
     const restored = await migrator.migrateToLatest();
     expect(restored.error).toBeUndefined();
-    expect(restored.results).toHaveLength(3);
+    expect(restored.results).toHaveLength(6);
   });
 });

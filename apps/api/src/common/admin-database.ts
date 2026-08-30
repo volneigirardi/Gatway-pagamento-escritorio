@@ -111,6 +111,7 @@ export interface AdminDatabase {
     current_period_end: Date;
     trial_ends_at: Date | null;
     canceled_at: Date | null;
+    deleted_at: Date | null;
     created_at: Generated<Date>;
     updated_at: Generated<Date>;
   };
@@ -129,17 +130,21 @@ export interface AdminDatabase {
     issued_at: Date | null;
     paid_at: Date | null;
     voided_at: Date | null;
+    deleted_at: Date | null;
     created_at: Generated<Date>;
     updated_at: Generated<Date>;
   };
   invoice_items: {
     id: Generated<string>;
+    tenant_id: string;
     invoice_id: string;
     description: string;
     quantity: Generated<number>;
     unit_amount_cents: string;
     total_cents: string;
+    deleted_at: Date | null;
     created_at: Generated<Date>;
+    updated_at: Generated<Date>;
   };
   payments: {
     id: Generated<string>;
@@ -155,6 +160,7 @@ export interface AdminDatabase {
     paid_at: Date | null;
     failed_at: Date | null;
     refunded_at: Date | null;
+    deleted_at: Date | null;
     created_at: Generated<Date>;
     updated_at: Generated<Date>;
   };
