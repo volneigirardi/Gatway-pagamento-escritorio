@@ -190,14 +190,18 @@ export async function grantRuntimePrivileges<DB>(
     DO $grants$
     DECLARE
       object_record record;
+      schema_name text;
+      app_schemas text[] := ARRAY(
+        SELECT nspname FROM pg_namespace WHERE nspname IN ('public', 'qa_')
+      );
     BEGIN
       FOR object_record IN
         SELECT n.nspname AS schema_name, c.relname AS object_name, c.relkind
         FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = ANY (ARRAY['public','qa_']::text[])
+        WHERE n.nspname = ANY (app_schemas)
           AND c.relkind IN ('r', 'p', 'v', 'm')
-          AND c.relname NOT IN ('kysely_migration', 'kysely_migration_lock')
+          AND c.relname NOT LIKE 'kysely_migration%'
           AND NOT EXISTS (
             SELECT 1
             FROM pg_depend d
@@ -239,7 +243,7 @@ export async function grantRuntimePrivileges<DB>(
         SELECT n.nspname AS schema_name, c.relname AS object_name
         FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = ANY (ARRAY['public','qa_']::text[])
+        WHERE n.nspname = ANY (app_schemas)
           AND c.relkind = 'S'
           AND NOT EXISTS (
             SELECT 1
@@ -256,12 +260,11 @@ export async function grantRuntimePrivileges<DB>(
         );
       END LOOP;
 
-      REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC;
-      REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM PUBLIC;
-      REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
-      REVOKE ALL ON ALL TABLES IN SCHEMA qa_ FROM PUBLIC;
-      REVOKE ALL ON ALL SEQUENCES IN SCHEMA qa_ FROM PUBLIC;
-      REVOKE ALL ON ALL FUNCTIONS IN SCHEMA qa_ FROM PUBLIC;
+      FOREACH schema_name IN ARRAY app_schemas LOOP
+        EXECUTE format('REVOKE ALL ON ALL TABLES IN SCHEMA %I FROM PUBLIC', schema_name);
+        EXECUTE format('REVOKE ALL ON ALL SEQUENCES IN SCHEMA %I FROM PUBLIC', schema_name);
+        EXECUTE format('REVOKE ALL ON ALL FUNCTIONS IN SCHEMA %I FROM PUBLIC', schema_name);
+      END LOOP;
 
       IF EXISTS (
         SELECT 1

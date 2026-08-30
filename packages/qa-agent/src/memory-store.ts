@@ -12,12 +12,7 @@ import { assertSafeForMemory } from "./sanitize.js";
 
 export interface RememberFactInput {
   kind:
-    | "policy"
-    | "semantic"
-    | "procedural"
-    | "episodic"
-    | "learning"
-    | "handoff";
+    "policy" | "semantic" | "procedural" | "episodic" | "learning" | "handoff";
   title: string;
   content: string;
   metadata?: Record<string, unknown>;
@@ -111,7 +106,9 @@ export interface MemoryStore {
   readonly upsertGraphRelation: (
     input: UpsertGraphRelationInput,
   ) => Promise<void>;
-  readonly retrieveContext: (input: RetrieveContextInput) => Promise<QaContextPack>;
+  readonly retrieveContext: (
+    input: RetrieveContextInput,
+  ) => Promise<QaContextPack>;
   readonly invalidateEvidence: (memoryItemId: string) => Promise<void>;
   readonly compactMemory: (maxAgeDays?: number) => Promise<number>;
   readonly explainWhyTestWasSelected: (
@@ -157,9 +154,7 @@ export function createMemoryStore(
   async function rememberFact(input: RememberFactInput): Promise<string> {
     const safeTitle = assertSafeForMemory(input.title);
     const safeContent = assertSafeForMemory(input.content);
-    const contentHash = createHash("sha256")
-      .update(safeContent)
-      .digest("hex");
+    const contentHash = createHash("sha256").update(safeContent).digest("hex");
 
     return await db.transaction().execute(async (trx) => {
       const row = await trx
@@ -352,7 +347,11 @@ export function createMemoryStore(
       memoryQuery = memoryQuery.where("kind", "in", input.filters.kinds);
     }
     if (input.filters?.sourceSha) {
-      memoryQuery = memoryQuery.where("source_sha", "=", input.filters.sourceSha);
+      memoryQuery = memoryQuery.where(
+        "source_sha",
+        "=",
+        input.filters.sourceSha,
+      );
     }
     if (input.filters?.scope) {
       memoryQuery = memoryQuery.where("scope", "=", input.filters.scope);
@@ -467,8 +466,7 @@ export function createMemoryStore(
     const filteredItems: QaMemoryItemView[] = [];
     let currentTokens = tokenEstimate;
     for (const item of memoryItemViews) {
-      const itemTokens =
-        (item.title.length + (item.content?.length ?? 0)) / 4;
+      const itemTokens = (item.title.length + (item.content?.length ?? 0)) / 4;
       if (currentTokens + itemTokens > maxTokens) {
         break;
       }
@@ -526,7 +524,9 @@ export function createMemoryStore(
     command: string,
     changeId: string,
   ): Promise<string> {
-    const escapedCommand = command.replaceAll("%", "\\%").replaceAll("_", "\\_");
+    const escapedCommand = command
+      .replaceAll("%", "\\%")
+      .replaceAll("_", "\\_");
     const related = await db
       .selectFrom("qa_.memory_items")
       .selectAll()
@@ -546,10 +546,7 @@ export function createMemoryStore(
     }
 
     return related
-      .map(
-        (item) =>
-          `- ${item.title}: ${item.content ?? ""}`.slice(0, 200),
-      )
+      .map((item) => `- ${item.title}: ${item.content ?? ""}`.slice(0, 200))
       .join("\n");
   }
 

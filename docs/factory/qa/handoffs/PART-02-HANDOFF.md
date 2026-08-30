@@ -59,10 +59,10 @@ node packages/qa-agent/dist/cli.js preflight
 
 ## Bloqueadores
 
-| ID | Problema | Ação |
-|----|----------|------|
-| B01 | `pnpm format:check` falha em `.devin/scripts/auto-commit.js` | Corrigir formatação em passo de higiene |
-| B02 | Assertion bug em `admin-migrations.integration.spec.ts:458` | Confirmar intenção com dev e ajustar |
+| ID  | Problema                                                            | Ação                                                                         |
+| --- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| B01 | `pnpm format:check` falha em `.devin/scripts/auto-commit.js`        | Corrigir formatação em passo de higiene                                      |
+| B02 | Assertion bug em `admin-migrations.integration.spec.ts:458`         | Confirmar intenção com dev e ajustar                                         |
 | B03 | Diretório `.secrets/` não-rastreado com chaves JWT/MFA no workspace | Investigar origem, rotacionar se sensível, manter apenas em Devin/CI Secrets |
 
 ## Próximos Passos (Parte 3)

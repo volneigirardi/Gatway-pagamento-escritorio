@@ -30,6 +30,7 @@ Primeiro módulo de negócio — Administração da Plataforma (vertical operaci
 - Inbound/outbound webhook signing and delivery-with-dead-letter via `@saas/webhooks`.
 - The `professional` visual direction is accepted: minimalist Chatwoot-inspired layout and shadcn/ui component structure (ADR-013).
 - SLA target: 99.9% initial, evolving to 99.99% when justified.
+- QA Gatekeeper memory backend: dedicated `qa_` schema in the existing QA/homologation PostgreSQL instance, with pgvector enabled where available, hybrid RAG, fingerprint invalidation, and audit (ADR-018).
 
 ## Existing Modules
 
@@ -52,6 +53,7 @@ None yet — architecture prepared for webhooks and external APIs via `@saas/htt
 - Multi-tenant migration orchestration (iterating every tenant database) is not automated; see `docs/database/migration-standards.md`.
 - SSRF guard in `@saas/http-client` resolves DNS once before connecting (residual DNS-rebinding risk); acceptable until a real external integration is wired.
 - Backup/restore encryption format buffers the whole dump in memory (no chunked streaming yet); fine for current scale, revisit before very large databases.
+- QA Gatekeeper Part 3 memory backend is implemented and tests green. The formal `postgres-dba` subagent verdict could not be obtained because the tool is rejecting the call; a fallback DBA review returned `PASS WITH RISKS`, and the residual medium findings are accepted by user authorization. The `postgres-dba` formal pass should be re-run once the tool is available.
 
 ## Technical Debts
 

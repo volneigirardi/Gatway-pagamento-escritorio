@@ -1,22 +1,14 @@
-part: 2
-title: "Contrato, Skill, Playbook, Blueprint e estrutura executável"
-status: APROVADA
+part: 3
+title: "Memória persistente, organizacional, grafo, Second Brain e RAG"
+status: BLOQUEADA
 branch: master
-source_sha: "16fedeb7d776486aa2dab67d96199d203b4f3209"
+source_sha: "8e02669bbd2afabe2e317907e9ce3b060fb0d1d8"
+part_2_sha: "16fedeb7d776486aa2dab67d96199d203b4f3209"
 part_1_sha: "7a12564260bf9508f77b615fd74e6a2bcc8455d5"
 started_at: "2026-08-30"
 repository: "C:\\Projeto-Saas"
 
 commands_executed:
-  - name: git status --short
-    exit_code: 0
-    result: "Detected untracked .secrets/ directory and pre-existing docs/factory/qa/. AGENTS.md and pnpm-lock.yaml modified as expected."
-  - name: git log --oneline -5
-    exit_code: 0
-    result: "HEAD 16fedeb (Add auto-commit script using existing git author) differs from Part 1 SHA 7a12564."
-  - name: pnpm install
-    exit_code: 0
-    result: "Updated pnpm-lock.yaml to include new workspace package @saas/qa-agent."
   - name: pnpm nx run @saas/qa-agent:lint
     exit_code: 0
     result: PASS
@@ -25,33 +17,49 @@ commands_executed:
     result: PASS
   - name: pnpm nx run @saas/qa-agent:test
     exit_code: 0
-    result: "PASS — 24 unit tests (48 total with dist duplicates)"
+    result: "PASS — 30 tests (15 state-machine, 9 config, 6 memory-store integration with Testcontainers)"
   - name: pnpm nx run @saas/qa-agent:build
     exit_code: 0
     result: PASS
-  - name: node packages/qa-agent/dist/cli.js preflight
+  - name: pnpm nx run @saas/database:typecheck
     exit_code: 0
-    result: "PASS — produced structured QA cycle JSON"
+    result: PASS
+  - name: pnpm --filter @saas/database-migrations roles:bootstrap
+    exit_code: 0
+    result: PASS against postgres:18.4 on port 5445
+  - name: run-migrations.ts up admin
+    exit_code: 0
+    result: PASS — 10 admin migrations applied
+  - name: run-migrations.ts up qa
+    exit_code: 0
+    result: PASS — 4 QA migrations applied on same database as admin
+  - name: run-migrations.ts down qa
+    exit_code: 0
+    result: PASS — QA migration 004 rolled back
+  - name: pnpm nx run @saas/qa-agent:test with pgvector image
+    exit_code: 0
+    result: PASS — integration tests exercise migrations, deduplication, sanitization, graph relations, fingerprint invalidation, compaction
 
 evidence_files:
-  - docs/factory/agents/qa/AGENT_CONTRACT.md
-  - docs/factory/agents/qa/MEMORY.md
-  - docs/factory/agents/qa/LAST-HANDOFF.md
-  - docs/factory/agents/qa/LEARNINGS.md
-  - docs/factory/qa/QA_RELEASE_POLICY.md
-  - docs/factory/qa/QA_EVIDENCE_POLICY.md
-  - .agents/skills/qa-gatekeeper/SKILL.md
-  - docs/devin-playbooks/qa-cycle.devin.md
-  - docs/factory/qa/devin-blueprint.qa.yaml
-  - packages/qa-agent/src/config.ts
-  - packages/qa-agent/src/state-machine.ts
-  - packages/qa-agent/src/state-machine.test.ts
-  - packages/qa-agent/src/output.ts
-  - packages/qa-agent/src/commands.ts
-  - packages/qa-agent/src/cli.ts
-  - packages/qa-agent/src/index.ts
+  - docs/adr/ADR-018-qa-memory-backend.md
+  - database/migrations/qa/001_create_qa_schema.ts
+  - database/migrations/qa/002_create_qa_entities_and_relations.ts
+  - database/migrations/qa/003_create_qa_memory_and_test_records.ts
+  - database/migrations/qa/004_create_qa_embeddings_fingerprints_audit.ts
+  - packages/database/src/roles.ts
+  - database/scripts/run-migrations.ts
+  - packages/qa-agent/src/memory-store.ts
+  - packages/qa-agent/src/sanitize.ts
+  - packages/qa-agent/src/fingerprint.ts
+  - packages/qa-agent/test/memory-store.integration.spec.ts
+  - docs/factory/qa/handoffs/PART-03-HANDOFF.md
 
 blockers:
+  - id: DBA-03
+    severity: critical
+    title: "postgres-dba gate final could not be re-executed"
+    impact: "The mandatory independent PostgreSQL DBA subagent was rejected by the tool after the fixes. No formal PASS/PASS WITH RISKS/BLOCK verdict exists for the final state."
+    recommendation: "Re-invoke the postgres-dba subagent against source_sha 8e02669 and the changed migration/role files; do not claim approval without actual output."
   - id: B01
     severity: medium
     title: "Pre-existing formatting failure in .devin/scripts/auto-commit.js"
@@ -64,20 +72,22 @@ blockers:
     recommendation: "Confirmar intenção com dev e ajustar assertion."
   - id: B03
     severity: high
-    title: "Untracked .secrets/ directory present in workspace"
-    impact: "Local JWT/MFA keys exist in filesystem and could be accidentally committed."
-    recommendation: "Investigate origin, rotate if sensitive, store in Devin/CI Secrets only; .gitignore updated to block .secrets/."
+    title: "Untracked secret material in workspace"
+    impact: ".admin-master.txt contains a credential and .secrets/ contains JWT/MFA keys; both could be accidentally committed."
+    recommendation: "Investigate origin, rotate if sensitive, store only in Devin/CI Secrets; .gitignore already blocks both paths."
 
 next_prerequisites:
-  - "Aprovar Parte 2 e receber Parte 3."
-  - "Criar branch dedicada feature/qa-agent-system antes de continuar a implementação."
+  - "Reobter veredicto formal do subagente postgres-dba para o source_sha 8e02669."
+  - "Se o veredicto for BLOCK, corrigir achados críticos/alto e reinvocar o gate."
   - "Resolver B01/B02 antes do gate final na Parte 9."
   - "Investigar e remover/rotacionar B03 conforme política de segurança."
 
-secrets_found: false
+secrets_found: true
 notes: |
-  Nenhum segredo foi versionado nos artefatos da Parte 2. Foi detectado um
-  diretório .secrets/ não-rastreado no workspace com chaves JWT e MFA.
-  O .gitignore foi atualizado para bloquear .secrets/, e o fato foi
-  registrado como bloqueador B03. A origem desses arquivos deve ser
-  investigada antes de qualquer commit.
+  Parte 3 está implementada e commitada no SHA 8e02669. O pacote @saas/qa-agent
+  passa em lint, typecheck, testes (30) e build. As migrations QA aplicam e
+  revertem corretamente em postgres:18.4 e em pgvector/pgvector:pg18, com
+  fallback defensivo quando pgvector não está disponível. O modelo de
+  separação de papéis (blupo_migrator/blupo_app) foi ajustado para o schema
+  qa_. O bloqueio DBA-03 é processual: o subagente postgres-dba foi
+  rejeitado pela ferramenta, impedindo o veredicto final obrigatório.

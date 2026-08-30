@@ -25,9 +25,7 @@ export function newCommandContext(config: QaConfig): CommandContext {
   };
 }
 
-function openMemoryStore(
-  config: QaConfig,
-): MemoryStore | undefined {
+function openMemoryStore(config: QaConfig): MemoryStore | undefined {
   if (!config.databaseUrl) {
     return undefined;
   }
@@ -47,7 +45,9 @@ export function transition(
   return context.machine.transition(event);
 }
 
-export async function preflight(context: CommandContext): Promise<CommandResult> {
+export async function preflight(
+  context: CommandContext,
+): Promise<CommandResult> {
   const start = Date.now();
   const checks: string[] = [];
 
@@ -99,7 +99,9 @@ export async function preflight(context: CommandContext): Promise<CommandResult>
   return result;
 }
 
-export async function baseline(context: CommandContext): Promise<CommandResult> {
+export async function baseline(
+  context: CommandContext,
+): Promise<CommandResult> {
   const start = Date.now();
   const output = [
     "Baseline recorded:",

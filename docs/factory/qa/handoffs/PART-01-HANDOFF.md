@@ -46,9 +46,9 @@ pnpm build                  # PASS
 
 ## Bloqueadores Baseline
 
-| ID | Problema | Local | Ação Necessária |
-|----|----------|-------|-----------------|
-| Q01 | `pnpm format:check` falha | `.devin/scripts/auto-commit.js` | Corrigir formatação em passo de higiene e reexecutar |
+| ID  | Problema                           | Local                                                    | Ação Necessária                                                                 |
+| --- | ---------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Q01 | `pnpm format:check` falha          | `.devin/scripts/auto-commit.js`                          | Corrigir formatação em passo de higiene e reexecutar                            |
 | Q02 | Assertion bug em teste de migração | `apps/api/test/admin-migrations.integration.spec.ts:458` | Confirmar intenção com dev e corrigir expectation de 6 para 5, ou ajustar teste |
 
 ## Decisões Pendentes para a Parte 2

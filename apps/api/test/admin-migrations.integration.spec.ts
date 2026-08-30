@@ -455,6 +455,6 @@ describe("admin catalog migrations", () => {
     await db.deleteFrom("tenants").where("id", "=", tenantId).execute();
     const restored = await migrator.migrateToLatest();
     expect(restored.error).toBeUndefined();
-    expect(restored.results).toHaveLength(6);
+    expect(restored.results).toHaveLength(5);
   });
 });

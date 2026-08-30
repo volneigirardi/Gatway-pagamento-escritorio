@@ -34,7 +34,9 @@ export function sanitizeForMemory(input: string): SanitizeResult {
     const matches = sanitized.match(pattern);
     if (matches) {
       for (const match of matches) {
-        violations.push(`denied PII/sensitive pattern: ${match.slice(0, 8)}...`);
+        violations.push(
+          `denied PII/sensitive pattern: ${match.slice(0, 8)}...`,
+        );
       }
       sanitized = sanitized.replace(pattern, "[REDACTED]");
     }
