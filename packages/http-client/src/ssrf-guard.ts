@@ -62,6 +62,7 @@ function isBlockedIpv6(ip: string): string | null {
 export interface SsrfGuardOptions {
   /** Additional hostnames that are always allowed even if they resolve privately (e.g. local dev). */
   allowedHosts?: string[];
+  allowInsecureHttp?: boolean;
 }
 
 /**
@@ -82,9 +83,12 @@ export async function assertPublicHttpUrl(
     throw new SsrfBlockedError("invalid URL", url);
   }
 
-  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+  if (
+    parsed.protocol !== "https:" &&
+    !(parsed.protocol === "http:" && options.allowInsecureHttp)
+  ) {
     throw new SsrfBlockedError(
-      `unsupported protocol "${parsed.protocol}"`,
+      `insecure or unsupported protocol "${parsed.protocol}"`,
       parsed.hostname,
     );
   }

@@ -26,6 +26,13 @@ This is the foundation of a long-lived enterprise SaaS product. It is multi-tena
 - Authorization lives in the backend; frontend authorization is not sufficient.
 - All tenant isolation changes require automated negative tests using two tenants.
 
+## PostgreSQL DBA Gate
+
+- Any change that can affect PostgreSQL schema, migrations, SQL/Kysely queries, repositories, indexes, constraints, RLS, roles/grants, connection pools, seeds, backup/restore, or database infrastructure must use the appropriate database skill and run the `postgres-dba` subagent after implementation.
+- The final `postgres-dba` review is mandatory before completion, commit, or merge; the `database-review` skill supplements but never replaces it.
+- Critical/high DBA findings block completion. Medium findings must be fixed or explicitly accepted and documented with evidence.
+- Never claim the DBA gate passed without actual subagent output and a recorded verdict.
+
 ## Security Rule
 
 - No secrets in code, commits, or logs.

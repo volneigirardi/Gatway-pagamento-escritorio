@@ -7,22 +7,29 @@ import {
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
+import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
 import compress from "@fastify/compress";
 import { AppModule } from "./app.module.js";
+import { hydrateFileEnvironment, parseTrustedProxies } from "@saas/config";
 import { createLogger } from "@saas/observability";
 
 async function bootstrap(): Promise<void> {
+  hydrateFileEnvironment();
   const logger = createLogger(process.env["LOG_LEVEL"] ?? "info");
+  const trustedProxies = parseTrustedProxies(process.env["TRUSTED_PROXIES"]);
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({
-      trustProxy: process.env["TRUSTED_PROXIES"] === "true",
+      trustProxy: trustedProxies.length > 0 ? trustedProxies : false,
       bodyLimit: 1024 * 1024,
     }),
     { logger: false },
   );
   app.enableShutdownHooks();
+  const cookieSecret = process.env["COOKIE_SECRET"];
+  if (!cookieSecret) throw new Error("COOKIE_SECRET is required");
+  await app.register(cookie, { secret: cookieSecret, hook: "onRequest" });
   app.setGlobalPrefix("/api");
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" });
 
@@ -63,6 +70,7 @@ async function bootstrap(): Promise<void> {
       "x-request-id",
       "x-correlation-id",
       "idempotency-key",
+      "x-csrf-token",
     ],
   });
 

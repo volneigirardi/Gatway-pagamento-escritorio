@@ -29,6 +29,8 @@ export class HealthController {
   async ready() {
     return this.health.check([
       () => this.memory.checkHeap("memory_heap", 512 * 1024 * 1024),
+      () => this.healthService.checkDatabase(),
+      () => this.healthService.checkRedis(),
     ]);
   }
 }

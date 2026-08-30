@@ -17,7 +17,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Follow the governance in AGENTS.md, .devin/rules/, and .devin/skills/. Destructive commands require explicit approval.\"}}'",
+          "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Follow the governance in AGENTS.md, .devin/rules/, and .devin/skills/. Destructive commands require explicit approval. Any task with database impact must use the appropriate database skill and run the postgres-dba subagent after implementation before completion, commit, or merge; database-review does not replace this mandatory gate.\"}}'",
           "timeout": 5
         }
       ]

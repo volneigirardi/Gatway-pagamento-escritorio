@@ -1,6 +1,17 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
+  name: web
+  namespace: saas
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: web
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
   name: api
   namespace: saas
 spec:

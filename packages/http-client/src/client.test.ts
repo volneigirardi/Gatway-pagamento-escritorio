@@ -7,7 +7,17 @@ describe("createSafeHttpClient", () => {
     const fetchImpl = vi.fn();
     const client = createSafeHttpClient({ fetchImpl });
 
-    await expect(client.fetch("http://127.0.0.1/")).rejects.toThrow(
+    await expect(client.fetch("https://127.0.0.1/")).rejects.toThrow(
+      SsrfBlockedError,
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("rejects plaintext HTTP unless explicitly enabled", async () => {
+    const fetchImpl = vi.fn();
+    const client = createSafeHttpClient({ fetchImpl });
+
+    await expect(client.fetch("http://8.8.8.8/")).rejects.toThrow(
       SsrfBlockedError,
     );
     expect(fetchImpl).not.toHaveBeenCalled();
@@ -18,7 +28,7 @@ describe("createSafeHttpClient", () => {
     const fetchImpl = vi.fn().mockResolvedValue(response);
     const client = createSafeHttpClient({ fetchImpl, timeoutMs: 1000 });
 
-    const result = await client.fetch("http://8.8.8.8/");
+    const result = await client.fetch("https://8.8.8.8/");
 
     expect(result.status).toBe(200);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
@@ -35,7 +45,7 @@ describe("createSafeHttpClient", () => {
       maxRetries: 2,
     });
 
-    const result = await client.fetch("http://8.8.8.8/");
+    const result = await client.fetch("https://8.8.8.8/");
 
     expect(result.status).toBe(200);
     expect(fetchImpl).toHaveBeenCalledTimes(2);
@@ -50,7 +60,7 @@ describe("createSafeHttpClient", () => {
     });
 
     await expect(
-      client.fetch("http://8.8.8.8/", { method: "POST" }),
+      client.fetch("https://8.8.8.8/", { method: "POST" }),
     ).rejects.toThrow("network error");
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
@@ -66,7 +76,7 @@ describe("createSafeHttpClient", () => {
       maxRetries: 2,
     });
 
-    const result = await client.fetch("http://8.8.8.8/", {
+    const result = await client.fetch("https://8.8.8.8/", {
       method: "POST",
       headers: { "Idempotency-Key": "abc-123" },
     });

@@ -8,8 +8,9 @@
 4. Compare estimated vs actual rows.
 5. Identify scans, sorts, spills, locks.
 6. Propose index or query change.
-7. Re-run EXPLAIN.
-8. Add regression test.
+7. Re-run EXPLAIN and record the before/after baseline.
+8. Add a regression test.
+9. Run the mandatory `postgres-dba` final review and record its verdict.
 
 ## Detection
 

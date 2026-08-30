@@ -1,6 +1,6 @@
 ---
 description: "Migration execution and safety rules"
-trigger: model_decision
+trigger: always_on
 ---
 
 # Migration Rules
@@ -13,3 +13,4 @@ trigger: model_decision
 - Back up before migrations in production.
 - Record migration history in each database.
 - Test migrations against a copy of production-like data before release.
+- Every migration change requires a final `postgres-dba` subagent review; critical/high findings block completion and merge.

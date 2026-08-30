@@ -8,8 +8,9 @@
 4. **Plan for non-trivial changes.** Write plans in `.devin/plans/` when the change is complex, risky, or cross-cutting.
 5. **Evidence required.** The agent must show command output, test results, or file contents to claim success.
 6. **Review before completion.** Run `git diff`, relevant tests, and appropriate skills/subagents.
-7. **No silent architecture changes.** Any change to architecture, dependencies, or ADRs requires approval.
-8. **Destructive operations blocked by default.** Hooks block dangerous commands; explicit approval required.
+7. **Mandatory PostgreSQL gate.** Any database-impacting task uses the appropriate database skill and receives a final `postgres-dba` subagent verdict; inline review is not a substitute.
+8. **No silent architecture changes.** Any change to architecture, dependencies, or ADRs requires approval.
+9. **Destructive operations blocked by default.** Hooks block dangerous commands; explicit approval required.
 
 ## Agent Roles
 

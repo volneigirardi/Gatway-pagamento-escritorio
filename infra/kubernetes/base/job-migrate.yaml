@@ -1,17 +1,22 @@
 # One-shot migration Job. Never run migrations from every replica's
-# startup — apply this Job (or trigger it from CI) before rolling out a new
+# startup — create this Job (or trigger it from CI) before rolling out a new
 # Deployment revision that depends on the new schema (expand-and-contract).
 apiVersion: batch/v1
 kind: Job
 metadata:
-  # Suffix with a version/revision when applying (e.g. migrate-2026-08-22-01)
-  # so re-running a migration set never collides with a completed Job.
-  name: migrate
+  # A generated name keeps each reviewed migration run immutable and auditable.
+  generateName: migrate-
   namespace: saas
+  labels:
+    app: migrate
 spec:
-  backoffLimit: 0
+  backoffLimit: 2
   activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 600
   template:
+    metadata:
+      labels:
+        app: migrate
     spec:
       serviceAccountName: saas-app
       automountServiceAccountToken: false
@@ -19,17 +24,25 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: migrate
           image: saas/migrate:latest
           imagePullPolicy: IfNotPresent
+          command:
+            ["node", "--experimental-strip-types", "scripts/run-migrations.ts"]
+          args: ["up", "admin"]
           envFrom:
             - configMapRef:
                 name: saas-config
             - secretRef:
-                name: saas-secrets
+                name: saas-migration-secrets
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -42,3 +55,7 @@ spec:
             limits:
               cpu: "500m"
               memory: 512Mi
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

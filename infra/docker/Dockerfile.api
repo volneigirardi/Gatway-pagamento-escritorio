@@ -6,8 +6,14 @@ RUN corepack enable && corepack prepare pnpm@11.15.1 --activate
 FROM base AS deps
 WORKDIR /app
 COPY pnpm-lock.yaml package.json pnpm-workspace.yaml nx.json ./
-COPY apps/api/package.json ./apps/api/package.json
-COPY packages/*/package.json ./packages/*/
+# pnpm --frozen-lockfile validates the whole workspace against pnpm-lock.yaml,
+# so every workspace package.json must be present even though only @saas/api
+# and its dependencies are actually installed below. node_modules/dist are
+# stripped by .dockerignore, so copying full directories here is cheap and
+# avoids brittle wildcard-to-wildcard COPY semantics for package.json files.
+COPY apps ./apps
+COPY packages ./packages
+COPY database ./database
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter @saas/api...
 
 FROM base AS build
@@ -16,14 +22,28 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps ./apps
 COPY --from=deps /app/packages ./packages
 COPY . .
-RUN pnpm --filter @saas/api build
+# Use Nx (not `pnpm --filter ... build`) so workspace dependencies
+# (@saas/config, @saas/observability, @saas/auth, @saas/outbox, ...) are
+# built first per the project graph, matching how `pnpm build` works
+# outside Docker. A bare `pnpm --filter @saas/api build` only runs @saas/api's
+# own tsc script and fails with "Cannot find module '@saas/config'" etc.
+RUN pnpm exec nx build @saas/api
 
 FROM node:24.18.0-alpine AS production
 WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
-COPY --from=build --chown=nodejs:nodejs /app/apps/api/dist ./dist
-COPY --from=build --chown=nodejs:nodejs /app/apps/api/package.json ./
+# Runtime deps (NestJS, socket.io, ioredis, @saas/* workspace packages, ...)
+# live in the pnpm-managed node_modules tree built in the `build` stage —
+# without this, the image has no runtime dependencies at all and crashes
+# immediately with ERR_MODULE_NOT_FOUND. Copying the three top-level dirs
+# (rather than just apps/api) preserves pnpm's relative symlinks, since
+# their depth relative to /app does not change. Revisit with `pnpm deploy`
+# for a smaller, pruned production image later.
+COPY --from=build --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=build --chown=nodejs:nodejs /app/packages ./packages
+COPY --from=build --chown=nodejs:nodejs /app/apps/api ./apps/api
 USER nodejs
 ENV NODE_ENV=production
+WORKDIR /app/apps/api
 EXPOSE 3000
 CMD ["node", "dist/main.js"]

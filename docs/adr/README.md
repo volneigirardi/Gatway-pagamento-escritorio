@@ -17,17 +17,21 @@ This directory contains Architecture Decision Records.
 
 ## Index (actual state, verified against `docs/adr/*.md` on disk)
 
-| ADR     | Title                                | Status   |
-| ------- | ------------------------------------- | -------- |
-| ADR-004 | Monorepo tooling                      | Accepted |
-| ADR-005 | Backend framework and runtime         | Accepted |
-| ADR-006 | Design system approach                | Proposed |
-| ADR-007 | Cache and cookie policy               | Accepted |
-| ADR-008 | Authentication and Authorization Strategy | Accepted |
-| ADR-009 | Tenant Isolation Strategy             | Accepted |
-| ADR-010 | Database Connection Pooling           | Accepted |
-| ADR-011 | Rate Limiting                         | Accepted |
-| ADR-012 | Transactional Outbox Pattern          | Accepted |
+| ADR     | Title                                                 | Status   |
+| ------- | ----------------------------------------------------- | -------- |
+| ADR-004 | Monorepo tooling                                      | Accepted |
+| ADR-005 | Backend framework and runtime                         | Accepted |
+| ADR-006 | Design system approach                                | Proposed |
+| ADR-007 | Cache and cookie policy                               | Accepted |
+| ADR-008 | Authentication and Authorization Strategy             | Accepted |
+| ADR-009 | Tenant Isolation Strategy                             | Accepted |
+| ADR-010 | Database Connection Pooling                           | Accepted |
+| ADR-011 | Rate Limiting                                         | Accepted |
+| ADR-012 | Transactional Outbox Pattern                          | Accepted |
+| ADR-013 | Visual identity selection                             | Accepted |
+| ADR-014 | PostgreSQL Runtime, Migration, and Provisioning Roles | Accepted |
+| ADR-015 | Unified Identity Directory and Authorization Realms   | Accepted |
+| ADR-016 | Mandatory PostgreSQL DBA Review Gate                  | Accepted |
 
 ## Known Gap (found during Fase 5 foundation audit)
 

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master, main]
   pull_request:
-    branches: [main]
+    branches: [master, main]
 
 env:
   NODE_VERSION: "24.x"
@@ -107,6 +107,7 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgres://test:test@localhost:5432/saas_test
+      MIGRATION_DATABASE_URL: postgres://test:test@localhost:5432/saas_test
       REDIS_URL: redis://localhost:6379
     steps:
       - uses: actions/checkout@v4
@@ -125,17 +126,20 @@ jobs:
 
       - name: Migration test (up / down / up on a disposable database)
         run: |
-          pnpm --filter @saas/database-migrations migrate up tenant
-          pnpm --filter @saas/database-migrations migrate down tenant
-          pnpm --filter @saas/database-migrations migrate up tenant
-          pnpm --filter @saas/database-migrations migrate status tenant
+          pnpm --filter @saas/database-migrations migrate tenant
+          pnpm --filter @saas/database-migrations migrate:down tenant
+          pnpm --filter @saas/database-migrations migrate tenant
+          pnpm --filter @saas/database-migrations migrate:status tenant
 
-      - name: API integration tests (tenant isolation, idempotency, concurrency)
+      - name: API integration tests (auth, tenant isolation, idempotency, concurrency)
         run: pnpm --filter @saas/api test:integration
         env:
           JWT_SECRET: ci-test-secret-32-bytes-long-for-tests-only
           CORS_ORIGINS: http://localhost:3004
           NODE_ENV: test
+
+      - name: Worker tenant-provisioning integration test
+        run: pnpm --filter @saas/worker test:integration
 
   e2e:
     runs-on: ubuntu-latest
@@ -212,8 +216,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate Kubernetes manifests (kustomize build)
-        run: kubectl kustomize infra/kubernetes/base > /tmp/rendered.yaml
+      - name: Validate Kubernetes manifests
+        run: |
+          kubectl kustomize infra/kubernetes/base > /tmp/rendered.yaml
+          kubectl create --dry-run=client -f infra/kubernetes/base/job-migrate.yaml -o yaml > /tmp/migrate-job.yaml
 
       - name: Validate Docker Compose files
         run: |

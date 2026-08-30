@@ -59,7 +59,7 @@ describe("concurrency", () => {
           .executeTakeFirstOrThrow();
         await trx
           .updateTable("counters")
-          .set("value", Number(row.value) + 1)
+          .set("value", row.value + 1)
           .where("id", "=", "aaaaaaaa-1111-1111-1111-111111111111")
           .execute();
       }),

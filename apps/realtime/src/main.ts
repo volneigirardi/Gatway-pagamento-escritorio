@@ -7,28 +7,23 @@ import {
 } from "@nestjs/platform-fastify";
 import { IoAdapter } from "@nestjs/platform-socket.io";
 import { AppModule } from "./app.module.js";
+import { hydrateFileEnvironment, parseTrustedProxies } from "@saas/config";
 import { createLogger } from "@saas/observability";
 
 async function bootstrap(): Promise<void> {
+  hydrateFileEnvironment();
   const logger = createLogger(process.env["LOG_LEVEL"] ?? "info");
+  const trustedProxies = parseTrustedProxies(process.env["TRUSTED_PROXIES"]);
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({
-      trustProxy: process.env["TRUSTED_PROXIES"] === "true",
+      trustProxy: trustedProxies.length > 0 ? trustedProxies : false,
       bodyLimit: 1024 * 1024,
     }),
     { logger: false },
   );
   app.enableShutdownHooks();
   app.useWebSocketAdapter(new IoAdapter(app));
-
-  const signals: NodeJS.Signals[] = ["SIGTERM", "SIGINT"];
-  for (const signal of signals) {
-    process.on(signal, () => {
-      logger.info({ signal }, "Shutting down realtime gateway");
-      void app.close();
-    });
-  }
 
   const port = Number(process.env["PORT"] ?? 3002);
   await app.listen(port, "0.0.0.0");

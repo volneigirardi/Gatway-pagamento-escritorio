@@ -37,7 +37,9 @@ spec:
             - configMapRef:
                 name: saas-config
             - secretRef:
-                name: saas-secrets
+                name: saas-database-runtime-secrets
+            - secretRef:
+                name: saas-redis-runtime-secrets
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

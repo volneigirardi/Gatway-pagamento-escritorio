@@ -48,7 +48,9 @@ spec:
             - configMapRef:
                 name: saas-config
             - secretRef:
-                name: saas-secrets
+                name: saas-redis-runtime-secrets
+            - secretRef:
+                name: saas-jwt-verification-secrets
           env:
             - name: PORT
               value: "3002"

@@ -2,44 +2,45 @@
 
 ## Assumptions
 
-- PostgreSQL max_connections: 500.
-- PgBouncer recommended in production (transaction pooling).
-- Each deployable uses a bounded pool.
+- PostgreSQL `max_connections`: 500 until production topology is finalized.
+- PgBouncer transaction pooling is required in production.
+- API HPA maximum: 10 replicas.
+- Worker HPA maximum: 8 replicas.
+- Tenant database pools are lazy (`min=0`) and bounded by an LRU cache.
 
-## Per-Replica Budget (without PgBouncer)
+## Configured Per-Replica Limits
 
-| Service    | Min | Max |
-| ---------- | --- | --- |
-| API        | 2   | 10  |
-| Worker     | 2   | 10  |
-| Scheduler  | 1   | 3   |
-| Realtime   | 1   | 5   |
-| Migrations | 1   | 1   |
-| Margin     | -   | 50  |
+| Service       | Admin pool | Tenant cache × pool |    Short-lived privileged connections | Maximum |
+| ------------- | ---------: | ------------------: | ------------------------------------: | ------: |
+| API           |          5 |              10 × 1 |                                     0 |      15 |
+| Worker        |          5 |                   0 | up to 8 at provisioning concurrency 4 |      13 |
+| Scheduler     |          5 |                   0 |                                     0 |       5 |
+| Migration Job |          0 |                   0 |                                     1 |       1 |
 
-Total per tenant DB per replica: ~30 connections.
-With 10 replicas: ~300 connections.
-Reserve 200 for admin/maintenance.
+## Worst-Case Server Budget
 
-## With PgBouncer
+| Workload                                           | Calculation      | Connections |
+| -------------------------------------------------- | ---------------- | ----------: |
+| API                                                | 10 replicas × 15 |         150 |
+| Worker                                             | 8 replicas × 13  |         104 |
+| Scheduler                                          | 2 replicas × 5   |          10 |
+| Migration Job                                      | one-shot         |           1 |
+| Operator, monitoring, maintenance, failover margin | reserved         |         100 |
+| **Total planned ceiling**                          |                  |     **365** |
+
+The remaining 167 connections are not a scaling target. They protect failover, rollout overlap, delayed pool eviction, and incident response. Horizontal replica limits or pool/cache values must not increase without a new calculation and `postgres-dba` review.
+
+## PgBouncer
 
 - Pool mode: transaction.
-- Default pool size: 100.
-- Reserve overhead for admin connections.
+- Size PgBouncer from observed active transactions, not client pool maxima.
+- Verify session-dependent features before transaction pooling; tenant context uses transaction-local `set_config(..., true)`.
+- Monitor client wait time, server utilization, transaction duration, and rejected clients.
 
-## Scaling Guidance
+## Required Metrics and Alerts
 
-- Increase `max_connections` or add PgBouncer before scaling replicas.
-- Monitor active/waiting connections.
-- Add connection pool metrics to dashboards.
-
-## Configuration
-
-```ts
-pool: {
-  min: 2,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-}
-```
+- Active, idle, waiting, and maximum pool connections by deployable.
+- Tenant pool cache occupancy and eviction count.
+- PostgreSQL active connections and percentage of `max_connections`.
+- PgBouncer client waiting and server-pool saturation.
+- Alert at 70% sustained utilization and 85% immediate utilization.

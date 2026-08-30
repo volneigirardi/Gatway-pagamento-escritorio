@@ -31,6 +31,13 @@ The backend is the only source of truth. Frontend roles are hints for UI, not en
 - It is stored in `RequestContext` (AsyncLocalStorage).
 - Every data query must include `tenant_id` predicate or be protected by RLS.
 
+## Authorization Realms
+
+- Platform tokens use `realm=platform`, audience `blupo-platform`, and no `tid`.
+- Tenant tokens use `realm=tenant`, audience `blupo-tenant`, and a signed `tid`.
+- `/api/v1/platform/*` rejects tenant tokens before controller/business logic.
+- `/api/v1/tenant/*` rejects platform tokens unless a future, explicitly designed support flow supersedes ADR-015.
+
 ## Admin
 
 - Global admin role exists only in admin catalog.

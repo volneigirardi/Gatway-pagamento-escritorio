@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+export * from "./auth.js";
+export * from "./platform.js";
+export * from "./billing.js";
+export * from "./tenant-portal.js";
+
 export const healthStatusSchema = z.object({
   status: z.enum(["ok", "degraded", "error"]),
   timestamp: z.string().datetime(),

@@ -56,7 +56,13 @@ spec:
             - configMapRef:
                 name: saas-config
             - secretRef:
-                name: saas-secrets
+                name: saas-database-runtime-secrets
+            - secretRef:
+                name: saas-redis-runtime-secrets
+            - secretRef:
+                name: saas-auth-signing-secrets
+            - secretRef:
+                name: saas-jwt-verification-secrets
           env:
             - name: PORT
               value: "3000"

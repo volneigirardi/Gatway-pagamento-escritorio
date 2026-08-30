@@ -1,8 +1,11 @@
 import {
   Kysely,
   PostgresDialect,
+  sql,
+  type Generated,
   type Selectable,
   type Insertable,
+  type Transaction,
   type Updateable,
 } from "kysely";
 import pg from "pg";
@@ -17,6 +20,7 @@ export interface Database {
     aggregate_type: string;
     aggregate_id: string;
     type: string;
+    event_version: Generated<string>;
     payload: string;
     metadata: string;
     created_at: string;
@@ -38,7 +42,9 @@ export interface ConnectionConfig {
   logger?: Logger;
 }
 
-export function createKysely(config: ConnectionConfig): Kysely<Database> {
+export function createKysely<DB = Database>(
+  config: ConnectionConfig,
+): Kysely<DB> {
   const logger = config.logger ? getChildLogger(config.logger) : undefined;
   const pool = new pg.Pool({
     connectionString: config.connectionString,
@@ -55,7 +61,7 @@ export function createKysely(config: ConnectionConfig): Kysely<Database> {
   });
 
   const dialect = new PostgresDialect({ pool });
-  return new Kysely<Database>({
+  return new Kysely<DB>({
     dialect,
     log(event) {
       if (event.level === "error") {
@@ -68,13 +74,36 @@ export function createKysely(config: ConnectionConfig): Kysely<Database> {
   });
 }
 
-export async function closeKysely(db: Kysely<Database>): Promise<void> {
+export async function closeKysely<DB>(db: Kysely<DB>): Promise<void> {
   await db.destroy();
 }
 
-export async function withTransaction<T>(
-  db: Kysely<Database>,
-  callback: (trx: Kysely<Database>) => Promise<T>,
+export async function withTransaction<DB, T>(
+  db: Kysely<DB>,
+  callback: (trx: Transaction<DB>) => Promise<T>,
 ): Promise<T> {
   return db.transaction().execute(callback);
 }
+
+export async function withTenantTransaction<DB, T>(
+  db: Kysely<DB>,
+  tenantId: string,
+  callback: (trx: Transaction<DB>) => Promise<T>,
+): Promise<T> {
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      tenantId,
+    )
+  ) {
+    throw new Error("tenantId must be a valid UUID");
+  }
+
+  return db.transaction().execute(async (trx) => {
+    await sql`SELECT set_config('app.current_tenant', ${tenantId}, true)`.execute(
+      trx,
+    );
+    return callback(trx);
+  });
+}
+
+export * from "./roles.js";

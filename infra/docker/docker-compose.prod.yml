@@ -1,17 +1,19 @@
-version: "3.9"
-
 services:
   traefik:
     image: traefik:v3.6
     command:
       - --api.dashboard=false
-      - --providers.docker.swarmMode=true
+      - --providers.swarm.endpoint=unix:///var/run/docker.sock
+      - --providers.swarm.exposedByDefault=false
+      - --providers.swarm.network=blupo-edge
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=edge
       - --entrypoints.websecure.address=:443
       - --entrypoints.web.address=:80
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
       - --entrypoints.web.http.redirections.entryPoint.scheme=https
       - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
-      - --certificatesresolvers.letsencrypt.acme.email=ops@example.com
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:?ACME_EMAIL required}
       - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
       - --accesslog=true
       - --log.level=INFO
@@ -34,6 +36,49 @@ services:
         condition: any
         delay: 5s
         max_attempts: 3
+      placement:
+        constraints:
+          - node.role == manager
+
+  web:
+    image: saas/web:${VERSION:-latest}
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    networks:
+      - edge
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.web.rule=Host(`app.blupo.com.br`)"
+        - "traefik.http.routers.web.priority=1"
+        - "traefik.http.routers.web.entrypoints=websecure"
+        - "traefik.http.routers.web.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.web.middlewares=security-headers@docker"
+        - "traefik.http.services.web.loadbalancer.server.port=8080"
+        - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
+        - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
+        - "traefik.http.middlewares.security-headers.headers.stsPreload=true"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
 
   api:
     image: saas/api:${VERSION:-latest}
@@ -42,13 +87,24 @@ services:
       PORT: 3000
       DATABASE_URL_FILE: /run/secrets/database_url
       REDIS_URL_FILE: /run/secrets/redis_url
-      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      JWT_PRIVATE_KEY_FILE: /run/secrets/jwt_private_key
+      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_public_key
+      JWT_ISSUER: https://app.blupo.com.br
+      JWT_PLATFORM_AUDIENCE: blupo-platform
+      JWT_TENANT_AUDIENCE: blupo-tenant
+      JWT_KEY_ID: blupo-key-1
+      COOKIE_SECRET_FILE: /run/secrets/cookie_secret
+      MFA_ENCRYPTION_KEY_FILE: /run/secrets/mfa_encryption_key
       CORS_ORIGINS_FILE: /run/secrets/cors_origins
+      TRUSTED_PROXIES: "loopback,linklocal,uniquelocal"
       LOG_LEVEL: info
     secrets:
       - database_url
       - redis_url
-      - jwt_secret
+      - jwt_private_key
+      - jwt_public_key
+      - cookie_secret
+      - mfa_encryption_key
       - cors_origins
     networks:
       - edge
@@ -71,21 +127,22 @@ services:
         reservations:
           cpus: "0.25"
           memory: 256M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.api.rule=Host(`app.blupo.com.br`) && PathPrefix(`/api`)"
+        - "traefik.http.routers.api.priority=100"
+        - "traefik.http.routers.api.entrypoints=websecure"
+        - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+        - "traefik.http.services.api.loadbalancer.server.port=3000"
+        - "traefik.http.middlewares.api-ratelimit.ratelimit.average=100"
+        - "traefik.http.middlewares.api-ratelimit.ratelimit.burst=200"
+        - "traefik.http.routers.api.middlewares=security-headers@docker,api-ratelimit@docker"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/v1/health/live"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/v1/health/ready"]
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 10s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`api.example.com`)"
-      - "traefik.http.routers.api.entrypoints=websecure"
-      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.api.loadbalancer.server.port=3000"
-      - "traefik.http.middlewares.api-ratelimit.ratelimit.average=100"
-      - "traefik.http.middlewares.api-ratelimit.ratelimit.burst=200"
-      - "traefik.http.routers.api.middlewares=api-ratelimit@docker"
 
   realtime:
     image: saas/realtime:${VERSION:-latest}
@@ -93,10 +150,17 @@ services:
       NODE_ENV: production
       PORT: 3002
       REDIS_URL_FILE: /run/secrets/redis_url
+      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_public_key
+      JWT_ISSUER: https://app.blupo.com.br
+      JWT_PLATFORM_AUDIENCE: blupo-platform
+      JWT_TENANT_AUDIENCE: blupo-tenant
+      JWT_KEY_ID: blupo-key-1
       CORS_ORIGINS_FILE: /run/secrets/cors_origins
+      TRUSTED_PROXIES: "loopback,linklocal,uniquelocal"
       LOG_LEVEL: info
     secrets:
       - redis_url
+      - jwt_public_key
       - cors_origins
     networks:
       - edge
@@ -113,19 +177,21 @@ services:
         limits:
           cpus: "0.5"
           memory: 512M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.realtime.rule=Host(`app.blupo.com.br`) && PathPrefix(`/socket.io`)"
+        - "traefik.http.routers.realtime.priority=110"
+        - "traefik.http.routers.realtime.entrypoints=websecure"
+        - "traefik.http.routers.realtime.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.realtime.middlewares=security-headers@docker"
+        - "traefik.http.services.realtime.loadbalancer.server.port=3002"
+        - "traefik.http.services.realtime.loadbalancer.server.scheme=http"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3002/health"]
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 10s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.realtime.rule=Host(`realtime.example.com`)"
-      - "traefik.http.routers.realtime.entrypoints=websecure"
-      - "traefik.http.routers.realtime.tls.certresolver=letsencrypt"
-      - "traefik.http.services.realtime.loadbalancer.server.port=3002"
-      - "traefik.http.services.realtime.loadbalancer.server.scheme=http"
 
   worker:
     image: saas/worker:${VERSION:-latest}
@@ -133,12 +199,14 @@ services:
       NODE_ENV: production
       DATABASE_URL_FILE: /run/secrets/database_url
       REDIS_URL_FILE: /run/secrets/redis_url
-      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      MIGRATION_DATABASE_URL_FILE: /run/secrets/migration_database_url
+      TENANT_PROVISIONER_DATABASE_URL_FILE: /run/secrets/tenant_provisioner_database_url
       LOG_LEVEL: info
     secrets:
       - database_url
       - redis_url
-      - jwt_secret
+      - migration_database_url
+      - tenant_provisioner_database_url
     networks:
       - backend
     deploy:
@@ -159,12 +227,10 @@ services:
       NODE_ENV: production
       DATABASE_URL_FILE: /run/secrets/database_url
       REDIS_URL_FILE: /run/secrets/redis_url
-      JWT_SECRET_FILE: /run/secrets/jwt_secret
       LOG_LEVEL: info
     secrets:
       - database_url
       - redis_url
-      - jwt_secret
     networks:
       - backend
     deploy:
@@ -181,15 +247,19 @@ services:
 
   migrate:
     image: saas/migrate:${VERSION:-latest}
+    command:
+      [
+        "node",
+        "--experimental-strip-types",
+        "scripts/run-migrations.ts",
+        "up",
+        "admin",
+      ]
     environment:
       NODE_ENV: production
-      DATABASE_URL_FILE: /run/secrets/database_url
-      REDIS_URL_FILE: /run/secrets/redis_url
-      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      MIGRATION_DATABASE_URL_FILE: /run/secrets/migration_database_url
     secrets:
-      - database_url
-      - redis_url
-      - jwt_secret
+      - migration_database_url
     networks:
       - backend
     deploy:
@@ -202,8 +272,8 @@ services:
 
 networks:
   edge:
-    driver: overlay
-    attachable: false
+    external: true
+    name: blupo-edge
   backend:
     driver: overlay
     internal: true
@@ -214,9 +284,19 @@ volumes:
 secrets:
   database_url:
     external: true
+  migration_database_url:
+    external: true
+  tenant_provisioner_database_url:
+    external: true
   redis_url:
     external: true
-  jwt_secret:
+  jwt_private_key:
+    external: true
+  jwt_public_key:
+    external: true
+  cookie_secret:
+    external: true
+  mfa_encryption_key:
     external: true
   cors_origins:
     external: true

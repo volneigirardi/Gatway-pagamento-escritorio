@@ -1,17 +1,25 @@
 import { Injectable, type NestMiddleware } from "@nestjs/common";
-import type { FastifyRequest, FastifyReply } from "fastify";
+import type { ServerResponse } from "node:http";
+import type { FastifyRequest } from "fastify";
 import { runWithRequestContext } from "@saas/observability";
 import { randomUUID } from "node:crypto";
 
+function validId(value: string | string[] | undefined): string | undefined {
+  if (typeof value !== "string") return undefined;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+    value,
+  )
+    ? value
+    : undefined;
+}
+
 @Injectable()
 export class RequestContextMiddleware implements NestMiddleware {
-  use(req: FastifyRequest, res: FastifyReply, next: () => void): void {
-    const requestId =
-      (req.headers["x-request-id"] as string | undefined) ?? randomUUID();
-    const correlationId =
-      (req.headers["x-correlation-id"] as string | undefined) ?? requestId;
-    void res.header("x-request-id", requestId);
-    void res.header("x-correlation-id", correlationId);
+  use(req: FastifyRequest, res: ServerResponse, next: () => void): void {
+    const requestId = validId(req.headers["x-request-id"]) ?? randomUUID();
+    const correlationId = validId(req.headers["x-correlation-id"]) ?? requestId;
+    res.setHeader("x-request-id", requestId);
+    res.setHeader("x-correlation-id", correlationId);
     runWithRequestContext({ requestId, correlationId }, next);
   }
 }

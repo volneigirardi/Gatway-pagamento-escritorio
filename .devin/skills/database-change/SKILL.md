@@ -19,7 +19,10 @@ Plan a database change.
 4. Provide up and down scripts unless irreversible (requires ADR).
 5. Update seed data if needed.
 6. Run migration against a local/development database and capture output.
-7. Review query plans for affected queries if non-trivial.
-8. Summarize: tables changed, data impact, rollback, risks.
+7. Capture query-shape evidence and review query plans for affected non-trivial queries in a safe non-production environment when available.
+8. Run tenant-isolation negative tests with two tenants when tenant data paths are affected.
+9. After implementation, invoke the `postgres-dba` subagent against the exact diff, migrations, queries, and evidence. This final review is mandatory and is not replaced by this skill.
+10. Resolve critical/high findings and rerun `postgres-dba`; medium findings require remediation or explicit documented user acceptance.
+11. Summarize: DBA verdict, tables changed, data and tenant impact, performance evidence, rollback, operational risks, and unresolved decisions.
 
-Do not run migrations against production without approval.
+Do not run migrations against production without approval. Do not mark the task complete without actual `postgres-dba` output.

@@ -5,6 +5,9 @@ resources:
   - namespace.yaml
   - serviceaccount.yaml
   - configmap.yaml
+  - deployment-web.yaml
+  - service-web.yaml
+  - ingress.yaml
   # secret.yaml is intentionally not listed here — create it out-of-band
   # (see secret.yaml.example) or manage it with an external secret operator.
   - deployment-api.yaml

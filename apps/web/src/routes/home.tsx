@@ -1,16 +1,29 @@
-import { Button } from "@saas/ui-web";
+import { Navigate } from "@tanstack/react-router";
+import { LoaderCircle } from "lucide-react";
 import type { ReactElement } from "react";
+import { useAuth } from "../lib/use-auth.js";
 
 export default function Home(): ReactElement {
+  const auth = useAuth();
+  if (auth.status === "loading") {
+    return (
+      <div
+        className="flex min-h-screen items-center justify-center bg-surface"
+        role="status"
+      >
+        <LoaderCircle
+          className="h-6 w-6 animate-spin text-primary-600"
+          aria-hidden="true"
+        />
+        <span className="sr-only">Carregando sessão</span>
+      </div>
+    );
+  }
+  if (auth.status === "anonymous") return <Navigate to="/login" replace />;
   return (
-    <section className="space-y-4" aria-labelledby="home-title">
-      <h1 id="home-title" className="text-2xl font-bold">
-        SaaS Enterprise
-      </h1>
-      <p className="text-text-muted">
-        Foundation scaffold. No business logic yet.
-      </p>
-      <Button>Get started</Button>
-    </section>
+    <Navigate
+      to={auth.session.user.realm === "platform" ? "/platform" : "/app"}
+      replace
+    />
   );
 }

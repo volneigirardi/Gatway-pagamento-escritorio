@@ -6,8 +6,13 @@ RUN corepack enable && corepack prepare pnpm@11.15.1 --activate
 FROM base AS deps
 WORKDIR /app
 COPY pnpm-lock.yaml package.json pnpm-workspace.yaml nx.json ./
-COPY apps/scheduler/package.json ./apps/scheduler/package.json
-COPY packages/*/package.json ./packages/*/
+# pnpm --frozen-lockfile validates the whole workspace against pnpm-lock.yaml,
+# so every workspace package.json must be present even though only
+# @saas/scheduler and its dependencies are actually installed below.
+# node_modules/dist are stripped by .dockerignore.
+COPY apps ./apps
+COPY packages ./packages
+COPY database ./database
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter @saas/scheduler...
 
 FROM base AS build
@@ -16,13 +21,19 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps ./apps
 COPY --from=deps /app/packages ./packages
 COPY . .
-RUN pnpm --filter @saas/scheduler build
+# Use Nx (not `pnpm --filter ... build`) so workspace dependencies are built
+# first per the project graph — see Dockerfile.api for the full rationale.
+RUN pnpm exec nx build @saas/scheduler
 
 FROM node:24.18.0-alpine AS production
 WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
-COPY --from=build --chown=nodejs:nodejs /app/apps/scheduler/dist ./dist
-COPY --from=build --chown=nodejs:nodejs /app/apps/scheduler/package.json ./
+# See Dockerfile.api for why the full node_modules/packages/app trees (not
+# just dist + package.json) must be copied here.
+COPY --from=build --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=build --chown=nodejs:nodejs /app/packages ./packages
+COPY --from=build --chown=nodejs:nodejs /app/apps/scheduler ./apps/scheduler
 USER nodejs
 ENV NODE_ENV=production
+WORKDIR /app/apps/scheduler
 CMD ["node", "dist/main.js"]

@@ -5,8 +5,7 @@ import {
   HttpStatus,
   Logger,
 } from "@nestjs/common";
-import { BaseExceptionFilter } from "@nestjs/core";
-import type { FastifyReply } from "fastify";
+import { BaseExceptionFilter, HttpAdapterHost } from "@nestjs/core";
 import { getRequestContext } from "@saas/observability";
 
 interface ProblemDetail {
@@ -22,9 +21,14 @@ interface ProblemDetail {
 @Catch()
 export class AllExceptionsFilter extends BaseExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
+
+  constructor(private readonly adapterHost: HttpAdapterHost) {
+    super(adapterHost.httpAdapter);
+  }
+
   override catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
-    const response = ctx.getResponse<FastifyReply>();
+    const response = ctx.getResponse<unknown>();
     const request = ctx.getRequest<{ url: string }>();
     const context = getRequestContext();
     const status =
@@ -49,6 +53,6 @@ export class AllExceptionsFilter extends BaseExceptionFilter {
       this.logger.error(
         exception instanceof Error ? exception.stack : String(exception),
       );
-    void response.status(status).send(problem);
+    this.adapterHost.httpAdapter.reply(response, problem, status);
   }
 }

@@ -1,5 +1,12 @@
 # Rule Catalog
 
+> Verified during the Fase 5 foundation audit (2026-08-23): all 27 rule
+> files under `.devin/rules/` have valid frontmatter (`description` +
+> `trigger`), are discoverable via `skill search`, and contain no
+> contradictions. One related governance defect was found and fixed in
+> `.devin/hooks.v1.json` (an overly broad destructive-command pattern) —
+> see `docs/FOUNDATION-ACCEPTANCE.md` §2.
+
 | File                                           | Purpose                                                                | Trigger        | Paths/Globs                                                                      | When Loaded                  | Owner        | Last Review |
 | ---------------------------------------------- | ---------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------------------- | ---------------------------- | ------------ | ----------- |
 | `AGENTS.md` (root)                             | Core project identity, stack, security, evidence, and completion rules | always_on      | workspace root                                                                   | Session start                | Architecture | 2026-08-14  |
@@ -8,8 +15,8 @@
 | `.devin/rules/security.md`                     | Security baseline for secrets, auth, encryption, input validation      | always_on      | workspace root                                                                   | Session start                | Security     | 2026-08-14  |
 | `.devin/rules/task-completion.md`              | Task completion and handoff rules                                      | always_on      | workspace root                                                                   | Session start                | Platform     | 2026-08-14  |
 | `.devin/rules/authentication-authorization.md` | Authn/authz implementation rules                                       | model_decision | auth-related code                                                                | When agent decides           | Security     | 2026-08-14  |
-| `.devin/rules/database.md`                     | Database design, queries, connection rules                             | model_decision | database code                                                                    | When agent decides           | DBA          | 2026-08-14  |
-| `.devin/rules/migrations.md`                   | Migration execution and safety rules                                   | model_decision | migrations                                                                       | When agent decides           | DBA          | 2026-08-14  |
+| `.devin/rules/database.md`                     | Mandatory PostgreSQL DBA gate, correctness, security, performance      | always_on      | workspace root                                                                   | Session start                | DBA          | 2026-08-24  |
+| `.devin/rules/migrations.md`                   | Migration execution, safety, and mandatory DBA review                  | always_on      | workspace root                                                                   | Session start                | DBA          | 2026-08-24  |
 | `.devin/rules/api-http.md`                     | REST API design and contract rules                                     | model_decision | API code                                                                         | When agent decides           | Architecture | 2026-08-14  |
 | `.devin/rules/external-integrations.md`        | External integration design rules                                      | model_decision | integrations                                                                     | When agent decides           | Architecture | 2026-08-14  |
 | `.devin/rules/webhooks.md`                     | Webhook delivery and reception rules                                   | model_decision | webhooks                                                                         | When agent decides           | Architecture | 2026-08-14  |

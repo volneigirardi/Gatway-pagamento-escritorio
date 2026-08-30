@@ -26,6 +26,11 @@
   migrations without applying them (dry-run for review).
 - `pnpm --filter @saas/database-migrations migrate:status` shows full
   migration history.
+- Migration jobs use `MIGRATION_DATABASE_URL` and never receive or reuse the
+  runtime `DATABASE_URL`; runtime services never receive migration credentials
+  (ADR-014).
+- After a successful migration, runtime DML grants are refreshed for
+  `blupo_app`, excluding Kysely migration metadata tables.
 - Backup before destructive changes.
 - Known gap: this script migrates one database per invocation. Iterating
   every tenant database is not yet automated — an operator or a wrapper

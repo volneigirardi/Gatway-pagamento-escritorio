@@ -6,8 +6,13 @@ RUN corepack enable && corepack prepare pnpm@11.15.1 --activate
 FROM base AS deps
 WORKDIR /app
 COPY pnpm-lock.yaml package.json pnpm-workspace.yaml nx.json ./
-COPY apps/web/package.json ./apps/web/package.json
-COPY packages/*/package.json ./packages/*/
+# pnpm --frozen-lockfile validates the whole workspace against pnpm-lock.yaml,
+# so every workspace package.json must be present even though only @saas/web
+# and its dependencies are actually installed below.
+# node_modules/dist are stripped by .dockerignore.
+COPY apps ./apps
+COPY packages ./packages
+COPY database ./database
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter @saas/web...
 
 FROM base AS build
@@ -16,9 +21,17 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps ./apps
 COPY --from=deps /app/packages ./packages
 COPY . .
-RUN pnpm --filter @saas/web build
+# Use Nx (not `pnpm --filter ... build`) so workspace dependencies are built
+# first per the project graph — see Dockerfile.api for the full rationale.
+RUN pnpm exec nx build @saas/web
 
 FROM nginx:1.27-alpine AS production
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
+COPY infra/docker/nginx-main.conf /etc/nginx/nginx.conf
 COPY infra/docker/nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+COPY infra/docker/security-headers.inc /etc/nginx/security-headers.inc
+RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/run /etc/nginx/conf.d
+USER nginx
+EXPOSE 8080
+STOPSIGNAL SIGQUIT
+CMD ["nginx", "-g", "daemon off;"]

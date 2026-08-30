@@ -11,7 +11,7 @@ interface NotesTable {
 
 type TestDatabase = Database & { notes: NotesTable };
 
-describe("tenant isolation", () => {
+describe("tenant-scoped application query", () => {
   let db: Kysely<TestDatabase>;
 
   beforeAll(async () => {
@@ -32,7 +32,7 @@ describe("tenant isolation", () => {
     await teardown();
   });
 
-  it("tenant A cannot read tenant B data when RLS is enforced", async () => {
+  it("returns only rows matching the explicit tenant predicate", async () => {
     const tenantA = "11111111-1111-1111-1111-111111111111";
     const tenantB = "22222222-2222-2222-2222-222222222222";
 

@@ -1,8 +1,11 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Migrator, FileMigrationProvider } from "kysely/migration";
+import { hydrateFileEnvironment } from "@saas/config";
+import { grantRuntimePrivileges } from "@saas/database";
 import pg from "pg";
 
 type Direction = "up" | "down" | "status" | "plan";
@@ -39,6 +42,7 @@ async function withMigrationLock<T>(
 }
 
 async function migrate(direction: Direction): Promise<void> {
+  hydrateFileEnvironment();
   const target = process.argv[3] ?? "tenant";
   const migrationsFolder = path.resolve(
     import.meta.dirname,
@@ -46,9 +50,9 @@ async function migrate(direction: Direction): Promise<void> {
     "migrations",
     target,
   );
-  const connectionString = process.env["DATABASE_URL"];
+  const connectionString = process.env["MIGRATION_DATABASE_URL"];
   if (!connectionString) {
-    throw new Error("DATABASE_URL environment variable is required");
+    throw new Error("MIGRATION_DATABASE_URL environment variable is required");
   }
 
   const db = new Kysely({
@@ -68,6 +72,8 @@ async function migrate(direction: Direction): Promise<void> {
       fs,
       path,
       migrationFolder: migrationsFolder,
+      import: async (filePath): Promise<unknown> =>
+        (await import(pathToFileURL(filePath).href)) as unknown,
     }),
   });
 
@@ -107,7 +113,10 @@ async function migrate(direction: Direction): Promise<void> {
     if (error) {
       console.error(error);
       process.exitCode = 1;
+      return;
     }
+
+    await grantRuntimePrivileges(db);
   });
 
   await db.destroy();

@@ -12,7 +12,7 @@ Run the pre-release checklist.
 
 1. Verify all tests pass (use `quality-gate` skill).
 2. Confirm version bump and changelog are correct.
-3. Verify migrations are up to date and tested.
+3. Verify migrations are up to date and tested; if the release contains database impact, confirm a final `postgres-dba` verdict of `PASS` or `PASS WITH RISKS` for the release diff.
 4. Verify Docker images build for all deployables.
 5. Confirm secrets and configs are in place for target environment.
 6. Check deployment runbook for rollback steps.

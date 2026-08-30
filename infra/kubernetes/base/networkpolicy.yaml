@@ -30,6 +30,25 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  name: allow-ingress-to-web
+  namespace: saas
+spec:
+  podSelector:
+    matchLabels:
+      app: web
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
   name: allow-ingress-to-api
   namespace: saas
 spec:
@@ -75,7 +94,7 @@ spec:
     matchExpressions:
       - key: app
         operator: In
-        values: ["api", "realtime", "worker", "scheduler"]
+        values: ["api", "realtime", "worker", "scheduler", "migrate"]
   policyTypes: ["Egress"]
   egress:
     # PostgreSQL and Redis are assumed to run outside this namespace

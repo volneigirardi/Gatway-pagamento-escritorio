@@ -21,6 +21,7 @@ Review changes for performance issues.
 6. Check for unnecessary re-renders or data fetching.
 7. Check for event storms or reconnect storms in realtime.
 8. Recommend measurements before optimization.
-9. Report findings with file paths and line numbers.
+9. If schema, migrations, PostgreSQL queries, indexes, transactions, pools/timeouts, or database operations are affected, invoke the mandatory `postgres-dba` subagent for final review.
+10. Report findings with file paths and line numbers, including the DBA verdict when applicable.
 
-Do not modify code unless asked.
+Do not modify code unless asked. This skill does not replace the mandatory DBA gate.

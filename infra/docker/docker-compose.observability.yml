@@ -1,6 +1,5 @@
 # Optional observability stack for local development.
 # Usage: docker compose -f docker-compose.dev.yml -f docker-compose.observability.yml up
-version: "3.9"
 
 services:
   otel-collector:

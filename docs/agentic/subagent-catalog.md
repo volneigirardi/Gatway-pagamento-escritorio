@@ -1,17 +1,20 @@
 # Subagent Catalog
 
-> Custom subagents are experimental. Equivalent skills exist for every subagent as fallback.
+> Custom subagents are experimental. Skills provide inline workflow guidance, but mandatory specialist gates (including `postgres-dba`) cannot be replaced by an inline self-review.
+>
+> Verified during the Fase 5 foundation audit (2026-08-23): all 8 reviewer
+> subagents in `.devin/agents/` are usable as `run_subagent` profiles.
 
-| Subagent                       | Role                                             | Model | Allowed Tools          | Notes              |
-| ------------------------------ | ------------------------------------------------ | ----- | ---------------------- | ------------------ |
-| `architect-reviewer`           | Module boundaries, dependencies, ADR consistency | swe   | read, grep, glob, exec | Read-only reviewer |
-| `postgres-dba`                 | Schema, migrations, queries, performance         | swe   | read, grep, glob, exec | Read-only reviewer |
-| `appsec-reviewer`              | Security vulnerabilities and compliance          | swe   | read, grep, glob, exec | Read-only reviewer |
-| `performance-network-reviewer` | Performance and network efficiency               | swe   | read, grep, glob, exec | Read-only reviewer |
-| `socketio-realtime-reviewer`   | Socket.IO realtime correctness                   | swe   | read, grep, glob, exec | Read-only reviewer |
-| `frontend-design-reviewer`     | Design system, components, accessibility         | swe   | read, grep, glob, exec | Read-only reviewer |
-| `platform-sre-reviewer`        | Docker, Swarm, Kubernetes, ops                   | swe   | read, grep, glob, exec | Read-only reviewer |
-| `qa-reliability-reviewer`      | Tests, edge cases, failure scenarios             | swe   | read, grep, glob, exec | Read-only reviewer |
+| Subagent                       | Role                                                      | Model | Allowed Tools          | Notes                                    |
+| ------------------------------ | --------------------------------------------------------- | ----- | ---------------------- | ---------------------------------------- |
+| `architect-reviewer`           | Module boundaries, dependencies, ADR consistency          | swe   | read, grep, glob, exec | Read-only reviewer                       |
+| `postgres-dba`                 | PostgreSQL correctness, security, performance, operations | swe   | read, grep, glob, exec | Mandatory final gate for database impact |
+| `appsec-reviewer`              | Security vulnerabilities and compliance                   | swe   | read, grep, glob, exec | Read-only reviewer                       |
+| `performance-network-reviewer` | Performance and network efficiency                        | swe   | read, grep, glob, exec | Read-only reviewer                       |
+| `socketio-realtime-reviewer`   | Socket.IO realtime correctness                            | swe   | read, grep, glob, exec | Read-only reviewer                       |
+| `frontend-design-reviewer`     | Design system, components, accessibility                  | swe   | read, grep, glob, exec | Read-only reviewer                       |
+| `platform-sre-reviewer`        | Docker, Swarm, Kubernetes, ops                            | swe   | read, grep, glob, exec | Read-only reviewer                       |
+| `qa-reliability-reviewer`      | Tests, edge cases, failure scenarios                      | swe   | read, grep, glob, exec | Read-only reviewer                       |
 
 ## Usage
 
@@ -24,3 +27,5 @@ Subagents are invoked by the main agent via `run_subagent` with a specific task.
 - informational
 
 Subagents do not modify code, deploy, access production, or reveal secrets.
+
+For every database-impacting task, the main agent must invoke `postgres-dba` after implementation and before completion, commit, or merge. Actual output and a final verdict of `PASS` or `PASS WITH RISKS` are required; `database-review` supplements but does not replace this gate.

@@ -5,8 +5,8 @@ export interface OutboxDatabase {
     aggregate_type: string;
     aggregate_id: string;
     type: string;
-    payload: string;
-    metadata: string;
+    payload: unknown;
+    metadata: unknown;
     created_at: string;
     processed_at: string | null;
   };

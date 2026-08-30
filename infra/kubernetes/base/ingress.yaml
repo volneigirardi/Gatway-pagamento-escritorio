@@ -1,0 +1,60 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app
+  namespace: saas
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "2m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - app.blupo.com.br
+      secretName: app-blupo-tls
+  rules:
+    - host: app.blupo.com.br
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  name: http
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: realtime
+  namespace: saas
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - app.blupo.com.br
+      secretName: app-blupo-tls
+  rules:
+    - host: app.blupo.com.br
+      http:
+        paths:
+          - path: /socket.io
+            pathType: Prefix
+            backend:
+              service:
+                name: realtime
+                port:
+                  name: http

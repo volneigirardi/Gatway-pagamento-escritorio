@@ -1,2 +1,2 @@
-import config from '@saas/eslint-config/react.mjs';
+import config from "@saas/eslint-config/react.mjs";
 export default config;

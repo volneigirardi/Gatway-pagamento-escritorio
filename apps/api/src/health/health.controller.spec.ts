@@ -10,7 +10,17 @@ describe("HealthController", () => {
     const module = await Test.createTestingModule({
       imports: [TerminusModule],
       controllers: [HealthController],
-      providers: [HealthService],
+      providers: [
+        {
+          provide: HealthService,
+          useValue: {
+            isHealthy: () => ({ status: "ok" }),
+            checkDatabase: () =>
+              Promise.resolve({ postgresql: { status: "up" } }),
+            checkRedis: () => Promise.resolve({ redis: { status: "up" } }),
+          },
+        },
+      ],
     }).compile();
     controller = module.get(HealthController);
   });

@@ -25,6 +25,13 @@ export interface ThemeColors {
   text: string;
   "text-muted": string;
   border: string;
+  chart?: {
+    1: string;
+    2: string;
+    3: string;
+    4: string;
+    5: string;
+  };
 }
 
 export interface Theme {
