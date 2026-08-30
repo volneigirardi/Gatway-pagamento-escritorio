@@ -1,0 +1,83 @@
+part: 2
+title: "Contrato, Skill, Playbook, Blueprint e estrutura executável"
+status: APROVADA
+branch: master
+source_sha: "16fedeb7d776486aa2dab67d96199d203b4f3209"
+part_1_sha: "7a12564260bf9508f77b615fd74e6a2bcc8455d5"
+started_at: "2026-08-30"
+repository: "C:\\Projeto-Saas"
+
+commands_executed:
+  - name: git status --short
+    exit_code: 0
+    result: "Detected untracked .secrets/ directory and pre-existing docs/factory/qa/. AGENTS.md and pnpm-lock.yaml modified as expected."
+  - name: git log --oneline -5
+    exit_code: 0
+    result: "HEAD 16fedeb (Add auto-commit script using existing git author) differs from Part 1 SHA 7a12564."
+  - name: pnpm install
+    exit_code: 0
+    result: "Updated pnpm-lock.yaml to include new workspace package @saas/qa-agent."
+  - name: pnpm nx run @saas/qa-agent:lint
+    exit_code: 0
+    result: PASS
+  - name: pnpm nx run @saas/qa-agent:typecheck
+    exit_code: 0
+    result: PASS
+  - name: pnpm nx run @saas/qa-agent:test
+    exit_code: 0
+    result: "PASS — 24 unit tests (48 total with dist duplicates)"
+  - name: pnpm nx run @saas/qa-agent:build
+    exit_code: 0
+    result: PASS
+  - name: node packages/qa-agent/dist/cli.js preflight
+    exit_code: 0
+    result: "PASS — produced structured QA cycle JSON"
+
+evidence_files:
+  - docs/factory/agents/qa/AGENT_CONTRACT.md
+  - docs/factory/agents/qa/MEMORY.md
+  - docs/factory/agents/qa/LAST-HANDOFF.md
+  - docs/factory/agents/qa/LEARNINGS.md
+  - docs/factory/qa/QA_RELEASE_POLICY.md
+  - docs/factory/qa/QA_EVIDENCE_POLICY.md
+  - .agents/skills/qa-gatekeeper/SKILL.md
+  - docs/devin-playbooks/qa-cycle.devin.md
+  - docs/factory/qa/devin-blueprint.qa.yaml
+  - packages/qa-agent/src/config.ts
+  - packages/qa-agent/src/state-machine.ts
+  - packages/qa-agent/src/state-machine.test.ts
+  - packages/qa-agent/src/output.ts
+  - packages/qa-agent/src/commands.ts
+  - packages/qa-agent/src/cli.ts
+  - packages/qa-agent/src/index.ts
+
+blockers:
+  - id: B01
+    severity: medium
+    title: "Pre-existing formatting failure in .devin/scripts/auto-commit.js"
+    impact: "Quality gate 'pnpm format:check' fails on a clean checkout."
+    recommendation: "Corrigir formatação em passo de higiene e reexecutar."
+  - id: B02
+    severity: medium
+    title: "Integration test assertion bug in admin-migrations.integration.spec.ts"
+    impact: "Automated migration rollback coverage reports a false failure."
+    recommendation: "Confirmar intenção com dev e ajustar assertion."
+  - id: B03
+    severity: high
+    title: "Untracked .secrets/ directory present in workspace"
+    impact: "Local JWT/MFA keys exist in filesystem and could be accidentally committed."
+    recommendation: "Investigate origin, rotate if sensitive, store in Devin/CI Secrets only; .gitignore updated to block .secrets/."
+
+next_prerequisites:
+  - "Aprovar Parte 2 e receber Parte 3."
+  - "Criar branch dedicada feature/qa-agent-system antes de continuar a implementação."
+  - "Resolver B01/B02 antes do gate final na Parte 9."
+  - "Investigar e remover/rotacionar B03 conforme política de segurança."
+
+secrets_found: false
+notes: |
+  Nenhum segredo foi versionado nos artefatos da Parte 2. Foi detectado um
+  diretório .secrets/ não-rastreado no workspace com chaves JWT e MFA.
+  O .gitignore foi atualizado para bloquear .secrets/, e o fato foi
+  registrado como bloqueador B03. A origem desses arquivos deve ser
+  investigada antes de qualquer commit.

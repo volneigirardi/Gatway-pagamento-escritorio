@@ -66,6 +66,8 @@ async function migrate(direction: Direction): Promise<void> {
 
   const migrator = new Migrator({
     db,
+    migrationTableName: `kysely_migration_${target}`,
+    migrationLockTableName: `kysely_migration_lock_${target}`,
     provider: new FileMigrationProvider({
       fs,
       path,

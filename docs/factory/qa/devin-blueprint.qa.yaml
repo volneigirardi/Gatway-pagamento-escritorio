@@ -1,0 +1,137 @@
+# Devin Blueprint for QA Gatekeeper
+# Declarative environment used by the qa-gatekeeper agent.
+# No credentials are stored here; Secrets are referenced by name only.
+
+name: qa-gatekeeper
+version: "1.0.0"
+description: Environment for the QA Gatekeeper agent validating the Integre system.
+
+initialize:
+  # Runtime / CLIs required for QA validation.
+  - name: nodejs
+    command: node --version
+    expected: ">=24.0.0 <25.0.0"
+    required: true
+
+  - name: pnpm
+    command: pnpm --version
+    expected: ">=11.0.0"
+    required: true
+
+  - name: git
+    command: git --version
+    required: true
+
+  - name: docker
+    command: docker --version
+    required: false
+    note: Required for integration tests, container builds, and local homologation services.
+
+  - name: kubectl
+    command: kubectl version --client
+    required: false
+    note: Required only for Kubernetes manifest validation.
+
+maintenance:
+  # Incremental dependencies used by the QA agent (do not install without approval).
+  - name: "@saas/qa-agent"
+    type: workspace-package
+    source: packages/qa-agent
+    note: Local QA core CLI; no external dependency.
+
+  - name: playwright
+    type: dev-dependency
+    version: "1.62.1"
+    scope: apps/web
+    note: Already installed; used for E2E validation.
+
+  - name: vitest
+    type: dev-dependency
+    version: "4.1.10"
+    scope: monorepo
+    note: Already installed; used for unit and integration tests.
+
+  - name: testcontainers
+    type: dev-dependency
+    version: "12.1.0"
+    scope: monorepo
+    note: Already installed; used for real Postgres/Redis in tests.
+
+knowledge:
+  # Canonical commands the QA agent can run (from docs/factory/qa/03-test-command-catalog.md).
+  # Only safe, documented commands are listed here.
+  static_quality:
+    - command: pnpm format:check
+      purpose: Prettier formatting check
+    - command: pnpm lint
+      purpose: ESLint across workspace
+    - command: pnpm typecheck
+      purpose: TypeScript check
+
+  tests:
+    - command: pnpm test
+      purpose: Unit/component tests
+    - command: pnpm --filter @saas/api test:integration
+      purpose: API integration tests (requires Docker)
+    - command: pnpm --filter @saas/worker test:integration
+      purpose: Worker integration tests (requires Docker)
+    - command: pnpm --filter @saas/web test:e2e
+      purpose: Web E2E tests (requires Playwright browsers)
+
+  build:
+    - command: pnpm build
+      purpose: Build all packages and apps
+
+  security:
+    - command: pnpm audit --audit-level moderate
+      purpose: Dependency vulnerability audit
+    - command: gitleaks detect --source .
+      purpose: Secret scan (when gitleaks CLI is available)
+
+  database:
+    - command: pnpm db:migrate:status
+      purpose: Show migration status
+    - command: pnpm --filter @saas/database-migrations migrate:plan
+      purpose: Dry-run pending migrations
+
+secrets:
+  # Secrets must be configured in Devin/CI; only names are referenced here.
+  - name: DATABASE_URL
+    description: Runtime database connection string for local/homologation.
+  - name: MIGRATION_DATABASE_URL
+    description: Migration role connection string; separate from runtime.
+  - name: REDIS_URL
+    description: Redis connection string.
+  - name: JWT_PRIVATE_KEY
+    description: Private key for signing test tokens.
+  - name: JWT_PUBLIC_KEY
+    description: Public key for verifying tokens.
+  - name: COOKIE_SECRET
+    description: Secret for cookie signing.
+  - name: MFA_ENCRYPTION_KEY
+    description: Key for encrypting MFA secrets.
+
+services:
+  # Local homologation services for integration/E2E validation.
+  - name: postgres
+    image: postgres:18.4
+    ports: ["5433:5432"]
+    note: Admin catalog and tenant databases.
+
+  - name: redis
+    image: redis:7.4-alpine
+    ports: ["6379:6379"]
+    note: Cache, sessions, queues, Socket.IO adapter.
+
+  - name: minio
+    image: minio/minio:RELEASE.2026-01-29T03-56-32Z
+    ports: ["9000:9000", "9001:9001"]
+    note: Object storage for large evidence artifacts.
+
+# How to apply this blueprint
+# 1. Configure the Secrets above in the Devin UI or CI environment.
+# 2. Ensure Docker is running.
+# 3. Run `pnpm install --frozen-lockfile`.
+# 4. Run `pnpm docker:up` to start local services.
+# 5. Run `pnpm --filter @saas/qa-agent preflight` to validate the environment.
+# This file does not modify external Devin configuration; it is a project-local specification.

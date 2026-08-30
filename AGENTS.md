@@ -96,3 +96,4 @@ This is the foundation of a long-lived enterprise SaaS product. It is multi-tena
 - Specs: `docs/specs/`
 - Security: `SECURITY.md`
 - Contributing: `CONTRIBUTING.md`
+- QA Gatekeeper: `docs/factory/agents/qa/AGENT_CONTRACT.md`, `.agents/skills/qa-gatekeeper/SKILL.md`

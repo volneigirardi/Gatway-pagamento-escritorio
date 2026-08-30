@@ -76,12 +76,33 @@ export async function bootstrapDatabaseRoles(
           'GRANT CONNECT ON DATABASE %I TO blupo_app, blupo_migrator, blupo_provisioner',
           current_database()
         );
+        EXECUTE format(
+          'GRANT CREATE ON DATABASE %I TO blupo_migrator',
+          current_database()
+        );
       END
       $database_grants$;
 
       REVOKE ALL ON SCHEMA public FROM PUBLIC;
       GRANT USAGE ON SCHEMA public TO blupo_app, blupo_migrator;
       GRANT CREATE ON SCHEMA public TO blupo_migrator;
+
+      DO $pgvector$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM pg_available_extensions WHERE name = 'vector'
+        ) THEN
+          CREATE EXTENSION IF NOT EXISTS vector;
+        END IF;
+      EXCEPTION
+        WHEN insufficient_privilege THEN
+          RAISE NOTICE 'pgvector extension cannot be created with current role';
+      END
+      $pgvector$;
+
+      CREATE SCHEMA IF NOT EXISTS qa_;
+      GRANT USAGE, CREATE ON SCHEMA qa_ TO blupo_migrator;
+      GRANT USAGE ON SCHEMA qa_ TO blupo_app;
     `);
 
     if (config.normalizeOwnership ?? true) {
@@ -174,7 +195,7 @@ export async function grantRuntimePrivileges<DB>(
         SELECT n.nspname AS schema_name, c.relname AS object_name, c.relkind
         FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = 'public'
+        WHERE n.nspname = ANY (ARRAY['public','qa_']::text[])
           AND c.relkind IN ('r', 'p', 'v', 'm')
           AND c.relname NOT IN ('kysely_migration', 'kysely_migration_lock')
           AND NOT EXISTS (
@@ -186,7 +207,8 @@ export async function grantRuntimePrivileges<DB>(
           )
       LOOP
         IF object_record.relkind IN ('r', 'p') THEN
-          IF object_record.object_name IN ('audit_logs', 'platform_audit_logs') THEN
+          IF object_record.object_name IN ('audit_logs', 'platform_audit_logs')
+             OR (object_record.schema_name = 'qa_' AND object_record.object_name = 'audit_log') THEN
             EXECUTE format(
               'REVOKE UPDATE, DELETE ON TABLE %I.%I FROM blupo_app',
               object_record.schema_name,
@@ -217,7 +239,7 @@ export async function grantRuntimePrivileges<DB>(
         SELECT n.nspname AS schema_name, c.relname AS object_name
         FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = 'public'
+        WHERE n.nspname = ANY (ARRAY['public','qa_']::text[])
           AND c.relkind = 'S'
           AND NOT EXISTS (
             SELECT 1
@@ -237,6 +259,9 @@ export async function grantRuntimePrivileges<DB>(
       REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC;
       REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM PUBLIC;
       REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
+      REVOKE ALL ON ALL TABLES IN SCHEMA qa_ FROM PUBLIC;
+      REVOKE ALL ON ALL SEQUENCES IN SCHEMA qa_ FROM PUBLIC;
+      REVOKE ALL ON ALL FUNCTIONS IN SCHEMA qa_ FROM PUBLIC;
 
       IF EXISTS (
         SELECT 1

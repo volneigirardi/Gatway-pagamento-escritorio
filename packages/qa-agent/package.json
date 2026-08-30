@@ -1,0 +1,41 @@
+{
+  "name": "@saas/qa-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "QA Gatekeeper executable core",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@saas/database": "workspace:*",
+    "kysely": "0.29.5",
+    "pg": "8.23.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@saas/eslint-config": "workspace:*",
+    "@saas/typescript-config": "workspace:*",
+    "@types/node": "26.2.0",
+    "@types/pg": "8.21.0",
+    "testcontainers": "12.1.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
+}
