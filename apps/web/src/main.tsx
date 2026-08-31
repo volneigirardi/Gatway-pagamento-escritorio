@@ -218,11 +218,7 @@ declare module "@tanstack/react-router" {
 function prefersDarkTheme(): boolean {
   try {
     const preferredTheme = window.localStorage.getItem("blupo.theme");
-    return (
-      preferredTheme === "dark" ||
-      (preferredTheme === null &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches)
-    );
+    return preferredTheme === "dark";
   } catch {
     return false;
   }

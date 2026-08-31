@@ -1,3 +1,4 @@
+import { QRCodeSVG } from "qrcode.react";
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import {
   AlertCircle,
@@ -358,9 +359,23 @@ export default function LoginPage(): ReactElement {
                   <ShieldCheck className="h-4 w-4" aria-hidden="true" />
                   <AlertTitle>Autenticador TOTP</AlertTitle>
                   <AlertDescription>
-                    Adicione a chave abaixo no seu aplicativo autenticador.
+                    Escaneie o QR code ou use a chave de configuração no seu
+                    aplicativo autenticador.
                   </AlertDescription>
                 </Alert>
+                <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-background p-6 text-center">
+                  <QRCodeSVG
+                    value={mfaSetup.uri}
+                    size={192}
+                    level="M"
+                    includeMargin
+                    title="QR code para configurar o autenticador"
+                    aria-label="QR code para configurar o autenticador"
+                  />
+                  <p className="mt-4 text-xs text-text-muted">
+                    Escaneie com Google Authenticator, Authy ou similar.
+                  </p>
+                </div>
                 <div className="rounded-lg border border-border bg-surface p-4 text-center">
                   <span className="text-xs text-text-muted">
                     Chave de configuração
