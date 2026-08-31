@@ -24,6 +24,8 @@ export async function runMigrations(connectionString: string): Promise<void> {
 
   const migrator = new Migrator({
     db,
+    migrationTableName: "kysely_migration_qa",
+    migrationLockTableName: "kysely_migration_lock_qa",
     provider: new FileMigrationProvider({
       fs,
       path,

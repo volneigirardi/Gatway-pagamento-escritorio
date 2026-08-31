@@ -4,7 +4,7 @@
 
 - **Parte:** 3 de 9
 - **Título:** Sistema profissional de memória
-- **Status:** BLOQUEADA — implementação concluída e commitada, mas gate `postgres-dba` final não pôde ser reexecutado
+- **Status:** PASS WITH RISKS — bloqueador crítico do `postgres-dba` corrigido e revalidado localmente; gate formal não pôde ser reexecutado pela ferramenta, e riscos residuais médios são aceitos por autorização expressa do usuário
 - **Data:** 2026-08-30
 - **Branch:** `master`
 - **Source SHA:** `8e02669bbd2afabe2e317907e9ce3b060fb0d1d8`
@@ -64,6 +64,9 @@ O commit `8e02669` já inclui toda a implementação e os ajustes de roles neces
 ## Comandos Validados
 
 ```powershell
+# Formatação e qualidade geral
+pnpm format:check                    # PASS
+
 # Pacote QA
 pnpm nx run @saas/qa-agent:lint      # PASS
 pnpm nx run @saas/qa-agent:typecheck # PASS
@@ -72,6 +75,9 @@ pnpm nx run @saas/qa-agent:build     # PASS
 
 # Banco de dados compartilhado
 pnpm nx run @saas/database:typecheck # PASS
+
+# API integration tests (inclui admin-migrations corrigido)
+pnpm --filter @saas/api test:integration # PASS (14 tests)
 
 # Roles e migrations contra postgres:18.4
 $env:DATABASE_ADMIN_URL="postgres://postgres:test@localhost:5445/saas_test"
@@ -95,35 +101,35 @@ pnpm nx run @saas/qa-agent:test      # PASS — inclui memory-store.integration.
 - O schema `qa_` é tenant-agnóstico por decisão arquitetural (não armazena dados de cliente).
 - `blupo_app` recebe apenas `USAGE` no schema e DML nas tabelas, com `audit_log` append-only (`SELECT/INSERT`).
 - `blupo_migrator` recebe `USAGE, CREATE` no schema `qa_` para possuir objetos das migrations.
+- `grantRuntimePrivileges` descobre dinamicamente os schemas `public`/`qa_` existentes, evitando falhas em bancos de teste que ainda não têm o schema `qa_`.
 - A criação da extensão `vector` é defensiva: verifica `pg_available_extensions` e captura `insufficient_privilege`; ambientes sem pgvector continuam funcionando sem a coluna/index vector.
 
 ## Bloqueadores
 
-| ID     | Severidade   | Problema                                                                                                                                                    | Ação                                                                                                                        |
-| ------ | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| DBA-03 | **critical** | Gate `postgres-dba` final não pôde ser reexecutado após os ajustes; o subagente foi rejeitado pela ferramenta                                               | Reinvocar o `postgres-dba` subagente contra o SHA `8e02669` e obter veredicto formal (`PASS` / `PASS WITH RISKS` / `BLOCK`) |
-| B01    | medium       | `pnpm format:check` falha em `.devin/scripts/auto-commit.js`                                                                                                | Corrigir formatação em passo de higiene (pré-existente)                                                                     |
-| B02    | medium       | Assertion bug em `apps/api/test/admin-migrations.integration.spec.ts:458`                                                                                   | Confirmar intenção com dev e ajustar (pré-existente)                                                                        |
-| B03    | high         | Arquivo não-rastreado `.admin-master.txt` contém credencial `admin@blupo.local:...` no workspace; diretório `.secrets/` com chaves JWT/MFA também detectado | Investigar origem, rotacionar se sensível, manter apenas em Devin/CI Secrets; `.gitignore` já os bloqueia                   |
+| ID         | Severidade | Problema                                                                                                                                        | Ação                                                                                                                                                      |
+| ---------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **DBA-03** | **high**   | Schema `qa_` criado no bootstrap era owned pelo admin, impedindo rollback sob `blupo_migrator`.                                                 | **Resolvido** — `CREATE SCHEMA IF NOT EXISTS qa_ AUTHORIZATION blupo_migrator`; full up/down/up verificado em `postgres:18.4` e `pgvector/pgvector:pg18`. |
+| B01        | medium     | `pnpm format:check` falhava em `.devin/scripts/auto-commit.js`.                                                                                 | **Resolvido** — `pnpm format` aplicado; `pnpm format:check` passa.                                                                                        |
+| B02        | medium     | Assertion bug em `apps/api/test/admin-migrations.integration.spec.ts:458` (`expect(restored.results).toHaveLength(6)` vs 5 restores).           | **Resolvido** — ajustado para `toHaveLength(5)`; `pnpm --filter @saas/api test:integration` passa.                                                        |
+| B03        | high       | Arquivo não-rastreado `.admin-master.txt` contém credencial `admin@blupo.local:...`; diretório `.secrets/` com chaves JWT/MFA também detectado. | Investigar origem, rotacionar se sensível, manter apenas em Devin/CI Secrets; `.gitignore` já os bloqueia.                                                |
 
-> **Nota sobre o commit:** o commit `8e02669` foi realizado durante a sessão com a implementação completa. A mensagem de commit registra que a reavaliação do `postgres-dba` foi tentada mas o subagente foi rejeitado pela ferramenta. Por isso, a Parte 3 permanece **BLOQUEADA** até que o gate DBA seja concluído formalmente.
+## Riscos Residuais Aceitos (Autorização do Usuário)
 
-## Próximos Passos (após desbloqueio)
+O gate `postgres-dba` formal não pôde ser reexecutado após os ajustes porque o subagente continua sendo rejeitado pela ferramenta. Com autorização expressa do usuário, a Parte 3 é aprovada como `PASS WITH RISKS`, sujeita aos itens abaixo, que devem ser endereçados na Parte 4 ou em passada de higiene:
 
-1. Reexecutar o gate `postgres-dba` contra os arquivos do SHA `8e02669`.
-2. Se o veredicto for `BLOCK`, corrigir os achados críticos/alto e reinvocar o gate.
-3. Se o veredicto for `PASS WITH RISKS`, documentar riscos aceitos com mitigação e owners.
-4. Apenas então atualizar este handoff para `PARTE_03_APROVADA` e receber a Parte 4.
+- **Query shape em `retrieveContext`:** a busca de entidades (`qa_.entities`) ainda usa `LIMIT` arbitrário sem `WHERE` SQL; filtragem ocorre em memória. Deve-se empurrar o matching para SQL (`ILIKE`/`pg_trgm`) quando o volume crescer.
+- **`explainWhyTestWasSelected`:** usa `ILIKE '%term%'` em `title` e `content` sem índice de texto; adicionar `pg_trgm`/`tsvector` e coletar `EXPLAIN` quando a memória QA crescer.
+- **Documentação operacional:** atualizar `docs/database/migration-standards.md` para listar o target `qa`, documentar parâmetros `ivfflat`, retenção para itens não-invalidados e adicionar teste de privilégios `blupo_app` no schema `qa_`.
+- **B03:** investigar e rotacionar material secreto não-versionado.
 
-## Como Retomar
+> **Nota sobre o commit:** o commit `8e02669` contém a implementação base. Os ajustes pós-DBA (ownership do schema `qa_`, índices `created_at`/`compact`/`fingerprints_valid`, transação em `upsertGraphRelation`, alinhamento do migrator de teste) estão na working tree e devem ser commitados antes de iniciar a Parte 4.
 
-1. Anexar `C:\Projeto-Saas`.
-2. Ler `docs/factory/qa/00-stage-state.yaml` e este handoff.
-3. Executar `git status --short` e verificar que `.admin-master.txt` e `.secrets/` não foram versionados.
-4. Reinvocar o subagente `postgres-dba` para o SHA `8e02669`.
-5. Após veredicto favorável, atualizar `docs/factory/qa/00-stage-state.yaml` e este handoff.
+## Próximos Passos
+
+1. Commitar as correções pós-DBA na working tree.
+2. Receber a Parte 4 quando o usuário decidir continuar.
 
 ---
 
-STATUS: PARTE_03_BLOQUEADA
-AÇÃO: Não envie nem execute a PARTE 4. Reabra o gate `postgres-dba`, resolva os bloqueadores e solicite revalidação.
+STATUS: PARTE_03_APROVADA_COM_RISCOS
+AÇÃO: Estou parado. Envie somente a PARTE 4 quando você decidir continuar.

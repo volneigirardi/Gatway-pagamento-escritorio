@@ -100,7 +100,7 @@ export async function bootstrapDatabaseRoles(
       END
       $pgvector$;
 
-      CREATE SCHEMA IF NOT EXISTS qa_;
+      CREATE SCHEMA IF NOT EXISTS qa_ AUTHORIZATION blupo_migrator;
       GRANT USAGE, CREATE ON SCHEMA qa_ TO blupo_migrator;
       GRANT USAGE ON SCHEMA qa_ TO blupo_app;
     `);

@@ -45,9 +45,21 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .unique()
     .execute();
 
+  await db.schema
+    .createIndex("idx_qa_memory_items_created_at")
+    .on(memoryItemsTable)
+    .column("created_at")
+    .execute();
+
   await sql`
     CREATE INDEX IF NOT EXISTS idx_qa_memory_items_metadata
     ON ${sql.ref(memoryItemsTable)} USING gin (metadata jsonb_path_ops)
+  `.execute(db);
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_qa_memory_items_compact
+    ON ${sql.ref(memoryItemsTable)} (updated_at)
+    WHERE metadata ->> 'invalidated' = 'true'
   `.execute(db);
 
   await db.schema

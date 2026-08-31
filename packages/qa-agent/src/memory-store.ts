@@ -246,82 +246,84 @@ export function createMemoryStore(
     const sourceSlug = `${input.sourceType}:${input.sourceName}`;
     const targetSlug = `${input.targetType}:${input.targetName}`;
 
-    const source = await db
-      .insertInto("qa_.entities")
-      .values({
-        id: randomUUID(),
-        type: input.sourceType,
-        name: input.sourceName,
-        slug: sourceSlug,
-        source_sha: config.sourceSha,
-        created_at: new Date(),
-        updated_at: new Date(),
-      })
-      .onConflict((oc) => oc.column("slug").doNothing())
-      .returning("id")
-      .executeTakeFirst();
+    await db.transaction().execute(async (trx) => {
+      const source = await trx
+        .insertInto("qa_.entities")
+        .values({
+          id: randomUUID(),
+          type: input.sourceType,
+          name: input.sourceName,
+          slug: sourceSlug,
+          source_sha: config.sourceSha,
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .onConflict((oc) => oc.column("slug").doNothing())
+        .returning("id")
+        .executeTakeFirst();
 
-    const target = await db
-      .insertInto("qa_.entities")
-      .values({
-        id: randomUUID(),
-        type: input.targetType,
-        name: input.targetName,
-        slug: targetSlug,
-        source_sha: config.sourceSha,
-        created_at: new Date(),
-        updated_at: new Date(),
-      })
-      .onConflict((oc) => oc.column("slug").doNothing())
-      .returning("id")
-      .executeTakeFirst();
+      const target = await trx
+        .insertInto("qa_.entities")
+        .values({
+          id: randomUUID(),
+          type: input.targetType,
+          name: input.targetName,
+          slug: targetSlug,
+          source_sha: config.sourceSha,
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .onConflict((oc) => oc.column("slug").doNothing())
+        .returning("id")
+        .executeTakeFirst();
 
-    const sourceEntity =
-      source ??
-      (await db
-        .selectFrom("qa_.entities")
-        .select("id")
-        .where("slug", "=", sourceSlug)
-        .executeTakeFirst());
-    const targetEntity =
-      target ??
-      (await db
-        .selectFrom("qa_.entities")
-        .select("id")
-        .where("slug", "=", targetSlug)
-        .executeTakeFirst());
+      const sourceEntity =
+        source ??
+        (await trx
+          .selectFrom("qa_.entities")
+          .select("id")
+          .where("slug", "=", sourceSlug)
+          .executeTakeFirst());
+      const targetEntity =
+        target ??
+        (await trx
+          .selectFrom("qa_.entities")
+          .select("id")
+          .where("slug", "=", targetSlug)
+          .executeTakeFirst());
 
-    if (!sourceEntity || !targetEntity) {
-      throw new Error("Could not resolve graph nodes for relation");
-    }
+      if (!sourceEntity || !targetEntity) {
+        throw new Error("Could not resolve graph nodes for relation");
+      }
 
-    await db
-      .insertInto("qa_.relations")
-      .values({
-        id: randomUUID(),
-        source_id: sourceEntity.id,
-        target_id: targetEntity.id,
-        relation_type: input.relationType,
-        confidence: input.confidence ?? 1,
-        inferred: input.inferred ?? false,
-        source_sha: config.sourceSha,
-        metadata: input.metadata ? JSON.stringify(input.metadata) : null,
-        created_at: new Date(),
-      })
-      .onConflict((oc) =>
-        oc.columns(["source_id", "target_id", "relation_type"]).doUpdateSet({
+      await trx
+        .insertInto("qa_.relations")
+        .values({
+          id: randomUUID(),
+          source_id: sourceEntity.id,
+          target_id: targetEntity.id,
+          relation_type: input.relationType,
           confidence: input.confidence ?? 1,
           inferred: input.inferred ?? false,
           source_sha: config.sourceSha,
           metadata: input.metadata ? JSON.stringify(input.metadata) : null,
-        }),
-      )
-      .execute();
+          created_at: new Date(),
+        })
+        .onConflict((oc) =>
+          oc.columns(["source_id", "target_id", "relation_type"]).doUpdateSet({
+            confidence: input.confidence ?? 1,
+            inferred: input.inferred ?? false,
+            source_sha: config.sourceSha,
+            metadata: input.metadata ? JSON.stringify(input.metadata) : null,
+          }),
+        )
+        .execute();
 
-    await audit(db, "UPSERT", "qa_.relations", undefined, {
-      source: sourceSlug,
-      target: targetSlug,
-      relation: input.relationType,
+      await audit(trx, "UPSERT", "qa_.relations", undefined, {
+        source: sourceSlug,
+        target: targetSlug,
+        relation: input.relationType,
+      });
     });
   }
 

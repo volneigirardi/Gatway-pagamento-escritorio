@@ -74,18 +74,14 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     )
     .execute();
 
-  await db.schema
-    .createIndex("idx_qa_fingerprints_lookup")
-    .on(fingerprintsTable)
-    .columns([
-      "source_sha",
-      "lockfile_hash",
-      "migration_hash",
-      "config_hash",
-      "test_version",
-      "fixture_hash",
-    ])
-    .execute();
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_qa_fingerprints_valid
+    ON ${sql.ref(fingerprintsTable)} (
+      source_sha, lockfile_hash, migration_hash, config_hash,
+      test_version, fixture_hash, env_fingerprint, browser, result_status
+    )
+    WHERE expires_at IS NULL
+  `.execute(db);
 
   await db.schema
     .createTable(auditLogTable)

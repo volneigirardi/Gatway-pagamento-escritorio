@@ -53,7 +53,7 @@ None yet — architecture prepared for webhooks and external APIs via `@saas/htt
 - Multi-tenant migration orchestration (iterating every tenant database) is not automated; see `docs/database/migration-standards.md`.
 - SSRF guard in `@saas/http-client` resolves DNS once before connecting (residual DNS-rebinding risk); acceptable until a real external integration is wired.
 - Backup/restore encryption format buffers the whole dump in memory (no chunked streaming yet); fine for current scale, revisit before very large databases.
-- QA Gatekeeper Part 3 memory backend is implemented and tests green. The formal `postgres-dba` subagent verdict could not be obtained because the tool is rejecting the call; a fallback DBA review returned `PASS WITH RISKS`, and the residual medium findings are accepted by user authorization. The `postgres-dba` formal pass should be re-run once the tool is available.
+- QA Gatekeeper Part 3 memory backend is implemented and tests green. The `postgres-dba` subagent identified a blocking rollback issue under `blupo_migrator`; the issue was fixed by assigning `qa_` schema ownership to `blupo_migrator`, and full up/down/up was verified on both `postgres:18.4` and `pgvector/pgvector:pg18`. A formal re-run of the subagent could not be completed because the tool is rejecting the call. By explicit user authorization, Part 3 is accepted as `PASS WITH RISKS`; residual medium query-shape/performance findings should be addressed in Part 4 or a hygiene pass.
 
 ## Technical Debts
 
